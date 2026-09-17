@@ -1,3 +1,5 @@
+from dotenv import load_dotenv
+load_dotenv()
 import json
 import re
 from glob import glob
@@ -118,7 +120,7 @@ def get_player_components(name, visible):
     with gr.Row():
         with gr.Column():
             role_name = gr.Textbox(
-                line=1,
+                lines=1,
                 show_label=False,
                 interactive=True,
                 visible=visible,
@@ -428,7 +430,7 @@ Prompting multiple AI agents to play games in a language-driven environment.
 
             chatbot_output = _convert_to_chatbot_output(all_messages, display_recv=True)
             update_dict = {
-                human_input_textbox: gr.Textbox.update(value=""),
+                human_input_textbox: gr.update(value=""),
                 chatbot: chatbot_output,
                 btn_step: gr.update(
                     value="Next Step", interactive=not timestep.terminal
@@ -572,5 +574,7 @@ Prompting multiple AI agents to play games in a language-driven environment.
         all_components + [state],
     )
 
-demo.queue()
-demo.launch(debug=DEBUG, server_port=8080)
+if __name__ == "__main__":
+    demo.queue()
+    demo.launch(debug=DEBUG, server_port=8080)
+

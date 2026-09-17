@@ -1,0 +1,50 @@
+{
+  "name": "Mafia",
+  "global_prompt": "You are playing a game of Mafia. The Moderator will announce the phases (Night, Day discussion, and Voting) and give you your secret role. Follow the Moderator's instructions carefully.\n\nRules:\n1. Keep your secret role in mind and pursue your team's objective (Mafia vs Citizens).\n2. At Night, special roles act secretly.\n3. During the Day, all living players discuss and share clues.\n4. During Voting, vote to eliminate a suspected Mafia member using the format: 'I vote to eliminate [Player Name]'.\n5. Always end your response with <EOS>.",
+  "environment": {
+    "env_type": "mafia",
+    "parallel": false,
+    "discussion_rounds": 1,
+    "max_days": 5,
+    "reveal_role_on_death": true
+  },
+  "players": [
+    {
+      "name": "Player 1",
+      "role_desc": "You are Player 1. Follow the Moderator's instructions. Do not pretend to be other players or the Moderator. State your intentions clearly.",
+      "backend": {
+        "backend_type": "openai-chat",
+        "temperature": 0.7,
+        "max_tokens": 100
+      }
+    },
+    {
+      "name": "Player 2",
+      "role_desc": "You are Player 2. Follow the Moderator's instructions. Do not pretend to be other players or the Moderator. State your intentions clearly.",
+      "backend": {
+        "backend_type": "openai-chat",
+        "temperature": 0.7,
+        "max_tokens": 100
+      }
+    },
+    {
+      "name": "Player 3",
+      "role_desc": "You are Player 3. Follow the Moderator's instructions. Do not pretend to be other players or the Moderator. State your intentions clearly.",
+      "backend": {
+        "backend_type": "openai-chat",
+        "temperature": 0.7,
+        "max_tokens": 100
+      }
+    },
+    {
+      "name": "Player 4",
+      "role_desc": "You are Player 4. Follow the Moderator's instructions. Do not pretend to be other players or the Moderator. State your intentions clearly.",
+      "backend": {
+        "backend_type": "openai-chat",
+        "temperature": 0.7,
+        "max_tokens": 100
+      }
+    }
+  ]
+}
+

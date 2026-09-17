@@ -49,12 +49,23 @@ It provides the following features:
 Requirements:
 
 - Python >= 3. 7
+- **Python 3.8** (required / recommended)
 - OpenAI API key (optional, for using GPT-3.5-turbo or GPT-4 as an LLM agent)
 
 Install with pip:
+Create a Conda environment with Python 3.8:
 
 ```bash
 pip install chatarena
+conda create -n chatarena python=3.8 -y
+conda activate chatarena
+```
+
+Install dependencies:
+
+```bash
+pip install -r requirements.txt
+pip install -e .
 ```
 
 or install from source:
