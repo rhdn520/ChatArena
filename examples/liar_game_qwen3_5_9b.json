@@ -1,0 +1,37 @@
+{
+  "name": "Liar Game Qwen3.5-9B Pilot",
+  "global_prompt": "You are playing Liar Game. There is exactly one Liar. At the start of each game, the Moderator privately tells each player their role. Every non-Liar receives the same secret word; the Liar does not receive it. Depending on the game setting, the topic may be announced to everyone or hidden from everyone. Do not assume the topic is known unless the Moderator announces it. Each player gives one indirect clue per round in fixed player order, for the number of rounds announced by the Moderator; all clues are public. There are no question-and-answer turns. Non-Liars aim to identify the Liar in the final vote and prevent the Liar from guessing the secret word. A non-Liar should give a clue specific enough to convince other informed players, but must not say the secret word or make it too easy for the Liar to infer. The Liar aims to avoid being identified; if identified, the Liar can still win by correctly guessing the secret word. As the Liar, infer the word from public clues and give a plausible indirect clue without admitting you do not know it. After all clue rounds, every player votes once for one other player as the Liar. When voting, output only 'I vote for Player N' with a real player number other than your own; malformed or self-votes count as abstentions. The player with the most votes is accused; ties are resolved in configured player order. If the accused player is not the Liar, the Liar wins immediately. If the accused player is the Liar, the Liar gets exactly one final word guess: a correct guess wins for the Liar, and an incorrect guess wins for the non-Liars. Winners receive 1.0 reward and losers 0.0. Follow the latest Moderator instruction for the current phase. On a clue turn output only one concise indirect clue, not a vote or a question; on a voting turn output only the vote; on a final guess turn output only the guessed word, with no explanation. Never speak for another player or reveal a private role message.",
+  "environment": {
+    "env_type": "liar_game",
+    "clue_rounds": 2,
+    "reveal_topic": true,
+    "parallel": false
+  },
+  "players": [
+    {
+      "name": "Player 1",
+      "role_desc": "You are Player 1. Follow the latest Moderator instruction. Do not vote until voting begins.",
+      "backend": {"backend_type": "openai-chat", "model": "Qwen/Qwen3.5-9B", "temperature": 0.6, "max_tokens": 512}
+    },
+    {
+      "name": "Player 2",
+      "role_desc": "You are Player 2. Follow the latest Moderator instruction. Do not vote until voting begins.",
+      "backend": {"backend_type": "openai-chat", "model": "Qwen/Qwen3.5-9B", "temperature": 0.6, "max_tokens": 512}
+    },
+    {
+      "name": "Player 3",
+      "role_desc": "You are Player 3. Follow the latest Moderator instruction. Do not vote until voting begins.",
+      "backend": {"backend_type": "openai-chat", "model": "Qwen/Qwen3.5-9B", "temperature": 0.6, "max_tokens": 512}
+    },
+    {
+      "name": "Player 4",
+      "role_desc": "You are Player 4. Follow the latest Moderator instruction. Do not vote until voting begins.",
+      "backend": {"backend_type": "openai-chat", "model": "Qwen/Qwen3.5-9B", "temperature": 0.6, "max_tokens": 512}
+    },
+    {
+      "name": "Player 5",
+      "role_desc": "You are Player 5. Follow the latest Moderator instruction. Do not vote until voting begins.",
+      "backend": {"backend_type": "openai-chat", "model": "Qwen/Qwen3.5-9B", "temperature": 0.6, "max_tokens": 512}
+    }
+  ]
+}

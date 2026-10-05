@@ -14,6 +14,8 @@
 
 **Aug 11, 2025: This project has been deprecated due to a lack of wide spread community use, and is no longer planned to receive any additional updates or support.**
 
+한국어 실행 안내: [Liar Game (Slurm + Gradio) 잡 제출·접속 가이드](docs/liar_game_gradio_ko.md)
+
 
 [![License: Apache2](https://img.shields.io/badge/License-Apache_2.0-green.svg)](https://github.com/chatarena/chatarena/blob/main/LICENSE)
 [![PyPI](https://img.shields.io/pypi/v/chatarena)](https://pypi.org/project/chatarena/)
