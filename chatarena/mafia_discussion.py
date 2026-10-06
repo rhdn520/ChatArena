@@ -34,9 +34,13 @@ SPEECH_PROMPT = (
 _CALL_SLOTS = threading.BoundedSemaphore(32)
 
 MODERATION_PROMPT = (
-    "REQUEST moderation: 비밀 역할을 추측하지 말고 중립적으로 토론을 진행하세요. "
-    "계속 듣겠다면 CONTINUE만, 투표를 시작하려면 END_DISCUSSION만 출력하세요. "
-    "그 외에는 공개할 짧은 한국어 안내문을 출력하세요. 내부 판단 과정은 출력하지 마세요."
+    "REQUEST moderation: 토론을 이끌지 말고 종료가 필요한지만 조용히 판단하세요. "
+    "기본 응답은 CONTINUE입니다. 새로운 근거·질문·답변·반박이 오가면 개입하지 마세요. "
+    "단순히 같은 사람을 의심하거나 발언이 짧다는 이유로 종료하지 마세요. "
+    "충분한 답변·반론 기회가 있었고 새 정보 없이 같은 주장만 계속 반복되거나, "
+    "논의가 충분히 끝나 투표할 시점일 때만 END_DISCUSSION을 출력하세요. "
+    "특정인을 지목하거나 발언을 요구하지 마세요. 발언 순서 배정, 의견 유도, 요약, "
+    "평가, 역할 추측, 안내문은 금지합니다. CONTINUE 또는 END_DISCUSSION 중 하나만 출력하세요."
 )
 
 
@@ -121,8 +125,12 @@ class MafiaDiscussionController:
         self._batch_started = 0.0
         self._moderating_silence = False
 
+    @property
+    def _use_moderator(self):
+        return self.moderator_query is not None and self.env.phase == "DAY_DISCUSSION"
+
     def _sync_day(self):
-        key = (self.env.session_id, self.env.day)
+        key = (self.env.session_id, self.env.day, self.env.phase)
         if key != self._key:
             self._key = key
             self._stage = "intent"
@@ -140,17 +148,25 @@ class MafiaDiscussionController:
             # Do not use get_observation('Moderator'): MessagePool grants it omniscience.
             obs = tuple(m for m in env.get_observation() if m.visible_to == "all")
             instruction = MODERATION_PROMPT + (
-                f"\n생존자: {', '.join(sorted(env.alive_players))}. "
+                f"\n생존자: {', '.join(env.randomized_names(env.alive_players))}. "
                 f"플레이어 발언 수: {env.discussion_messages}. "
                 f"의향 수집 횟수: {self._rounds}. 경과 시간: {self._elapsed:.1f}초."
             )
             if self._moderating_silence:
-                instruction += "\n모두 침묵하고 있습니다. 한 번 더 발언을 유도하거나 토론을 종료하세요."
+                instruction += "\n모두 침묵하고 있으며 입력 대기도 끝났습니다. 발언을 강요하지 말고 END_DISCUSSION으로 투표로 넘기세요."
         else:
             obs = tuple(env.get_observation(name))
             instruction = {"intent": INTENT_PROMPT, "speech": SPEECH_PROMPT}.get(
                 kind, f"REQUEST game_action: {name}의 현재 단계는 {env.phase}입니다. 현재 단계의 지시를 따르고 한국어로 응답하세요. 대상 이름은 표시된 그대로 쓰세요."
             )
+        if env.phase == "NIGHT_MAFIA_DISCUSSION":
+            context = ("현재는 밤의 마피아 전용 비공개 의논입니다. 생존 동료 마피아에게만 전달됩니다. "
+                       "오늘 밤 공격할 대상을 함께 상의하세요. 이 단계의 발언은 공격 확정이 아닙니다. ")
+            if kind == "speech":
+                instruction = ("REQUEST speech: " + context
+                               + "동료의 의견에 한국어 1~3문장으로 답하세요. 말하지 않으려면 PASS만 출력하세요.")
+            elif kind == "intent":
+                instruction += "\n" + context
         if retry:
             instruction += "\n이전 응답의 형식이 잘못되었습니다. 0~3 중 숫자 하나만 출력하세요."
         return DecisionRequest(name, kind, obs, instruction,
@@ -234,18 +250,22 @@ class MafiaDiscussionController:
 
     def _advance_clock(self):
         now = self.clock()
-        if not self.paused and self.env.phase == "DAY_DISCUSSION":
+        if not self.paused and self.env.is_discussion:
             self._elapsed += max(0, now - self._last_clock)
         self._last_clock = now
 
     def _limit(self):
         env = self.env
-        if env.discussion_messages >= env.max_discussion_messages:
+        private = env.phase == "NIGHT_MAFIA_DISCUSSION"
+        messages = env.mafia_discussion_messages if private else env.max_discussion_messages
+        rounds = env.mafia_intent_rounds if private else env.max_intent_rounds
+        seconds = env.mafia_discussion_seconds if private else env.discussion_seconds
+        if env.discussion_messages >= messages:
             return "message_limit"
         # The last allowed round may still select and publish a speech.
-        if self._rounds >= env.max_intent_rounds and self._stage == "intent" and not self.pending:
+        if self._rounds >= rounds and self._stage == "intent" and not self.pending:
             return "intent_limit"
-        if self.realtime and self._elapsed >= env.discussion_seconds:
+        if self.realtime and self._elapsed >= seconds:
             return "time_limit"
         return None
 
@@ -263,13 +283,15 @@ class MafiaDiscussionController:
                 raise ValueError("Game ended or empty input")
             self._sync_day()
             self._advance_clock()
-            if self.env.phase == "DAY_DISCUSSION":
+            if self.env.is_discussion:
+                if name not in self.env.discussion_participants:
+                    raise ValueError("현재 비공개 의논에는 참여할 수 없습니다.")
                 reason = self._limit()
                 if reason:
                     self._end(reason)
-                    raise ValueError("Discussion has ended; submit a vote")
+                    raise ValueError("의논이 끝났습니다. 대상 선택 차례를 확인해주세요.")
                 self.env.discussion_speak(name, text)
-                self._stage = "moderation" if self.moderator_query else "intent"
+                self._stage = "moderation" if self._use_moderator else "intent"
                 self._silence_deadline = None
                 self._scores = {}
                 self._retry_names = []
@@ -287,7 +309,7 @@ class MafiaDiscussionController:
         ) for name, score in sorted(self._scores.items()) if score > 0}
 
     def _silence(self):
-        humans_alive = self.human_names & self.env.alive_players
+        humans_alive = self.human_names & self.env.discussion_participants
         if self.realtime and humans_alive:
             if self._silence_deadline is None:
                 self._silence_deadline = self.clock() + self.env.silence_seconds
@@ -295,7 +317,7 @@ class MafiaDiscussionController:
                 self.status = "waiting_human"
                 return
         self._silence_deadline = None
-        if self.moderator_query and not self._silence_prompted:
+        if self._use_moderator and not self._silence_prompted:
             self._silence_prompted = True
             self._stage = "silence_moderation"
         else:
@@ -324,6 +346,8 @@ class MafiaDiscussionController:
                 allowed = {"speech": {"PASS"},
                            "moderation": {"CONTINUE", "END_DISCUSSION"}}
                 if command and command not in allowed.get(req.kind, set()):
+                    record.valid = False
+                if req.kind == "moderation" and command not in allowed["moderation"]:
                     record.valid = False
                 if req.kind == "intent":
                     record.valid = bool(re.fullmatch(r"[0-3]", record.response))
@@ -371,11 +395,20 @@ class MafiaDiscussionController:
                 self._stage = "choose"
             else:
                 self.env.discussion_speak(rec.request.player_name, rec.response)
-                self._stage = "moderation" if self.moderator_query else "intent"
+                self._stage = "moderation" if self._use_moderator else "intent"
         elif kind == "moderation":
             rec = results[0]
             if not rec.valid:
-                self._fail("Moderator failed: " + str(rec.error))
+                if rec.response and rec.error == "Invalid response format":
+                    # Never publish unsolicited instructions to individual players.
+                    # Retain the invalid decision internally, without another call
+                    # on the same conversation or interruption of active discussion.
+                    if self._moderating_silence:
+                        self._end("silence")
+                    else:
+                        self._stage = "intent"
+                else:
+                    self._fail("Moderator failed: " + str(rec.error))
             elif control_token(rec.response) == "END_DISCUSSION":
                 self._end("moderator")
             elif control_token(rec.response) == "CONTINUE":
@@ -383,13 +416,16 @@ class MafiaDiscussionController:
                     self._end("silence")
                 else:
                     self._stage = "intent"
-            else:
-                self.env.discussion_announce(rec.response)
-                self._stage = "intent"
         else:
             rec = results[0]
             if rec.valid:
-                self.env.step(rec.request.player_name, rec.response)
+                try:
+                    self.env.step(rec.request.player_name, rec.response)
+                except ValueError as exc:
+                    rec.valid = rec.trainable = False
+                    rec.error = str(exc)
+                    self._fail("Game action failed: " + rec.error)
+                    return
                 self._last_clock = self.clock()
             else:
                 self._fail("Game action failed: " + str(rec.error))
@@ -401,11 +437,14 @@ class MafiaDiscussionController:
                 return "closed"
             self._sync_day()
             self._advance_clock()
-            if not self.paused and self.env.phase == "DAY_DISCUSSION":
+            if not self.paused and self.env.is_discussion:
                 reason = self._limit()
                 if reason:
                     self._end(reason)
             self._drain()
+            # A completed night action can enter a new discussion immediately.
+            # Initialize its counters before submitting the first intent batch.
+            self._sync_day()
             if self.paused:
                 return self.status
             if self.env.is_terminal():
@@ -414,7 +453,7 @@ class MafiaDiscussionController:
             self.status = "running"
             if self.pending:
                 return self.status
-            if self.env.phase != "DAY_DISCUSSION":
+            if not self.env.is_discussion:
                 name = self.env.get_next_player()
                 if name in self.human_names:
                     self.status = "waiting_human"
@@ -426,7 +465,7 @@ class MafiaDiscussionController:
                 self._end(reason)
                 return self.status
             if self._stage == "intent":
-                names = sorted(self.env.alive_players - self.human_names)
+                names = sorted(self.env.discussion_participants - self.human_names)
                 self._scores = {}
                 self._score_records = {}
                 if names:

@@ -138,8 +138,26 @@ class TestDiscussion(unittest.TestCase):
         drive(ctrl, lambda: env.phase == "DAY_VOTING")
         self.assertEqual(len(requests), 1)
         self.assertTrue(all(m.visible_to == "all" for m in requests[0].observation))
-        self.assertEqual(sum(r.request.kind == "intent" for r in ctrl.records), 8)
+        self.assertEqual(sum(r.request.kind == "intent" for r in ctrl.records), 4)
+        self.assertFalse(any(m.content == "Any final thoughts?" for m in env.get_observation()))
         self.assertFalse(any(r.trainable for r in ctrl.records if r.request.kind == "moderation"))
+
+    def test_moderator_cannot_call_on_players_or_publish_guidance(self):
+        env = discussion_env(max_discussion_messages=3)
+        announcements = ['A님 먼저 말해주세요.', '다른 의견을 더 들어봅시다.']
+        moderator_calls = []
+        def moderator(req):
+            moderator_calls.append(req)
+            return announcements[len(moderator_calls) - 1]
+        ctrl = self.controller(env, lambda req: '2' if req.kind == 'intent' else '새 근거입니다.',
+                               moderator_query=moderator)
+        drive(ctrl, lambda: env.phase == 'DAY_VOTING')
+        self.assertEqual(env.discussion_messages, 3)
+        self.assertEqual(len(moderator_calls), 2)
+        self.assertFalse(any(m.content in announcements for m in env.get_observation()))
+        records = [r for r in ctrl.records if r.request.kind == 'moderation']
+        self.assertTrue(all(not r.valid and not r.trainable for r in records))
+        self.assertEqual(env.discussion_end_reason, 'message_limit')
 
     def test_moderator_can_end_after_speech(self):
         env = discussion_env()

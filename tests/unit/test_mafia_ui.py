@@ -223,3 +223,30 @@ class TestMafiaUI(unittest.TestCase):
                     else:
                         self.assertIn(label, value)
                 self.ui.clear(key)
+
+    def test_private_mafia_discussion_ui_permissions(self):
+        names = ['Player ' + str(i) for i in range(1, 8)]
+        for human_mafia in (True, False):
+            roles = {n: ('mafia' if n in (names[0 if human_mafia else 2], names[1])
+                         else 'villager') for n in names}
+            players = [Player(n, '', Human() if n == names[0] else QuietBackend()) for n in names]
+            arena = Arena(players, Mafia(names, role_mapping=roles))
+            key = self.ui.registry.add(arena)
+            session = self.ui.registry.get(key)
+            with session.lock:
+                arena.environment.discussion_speak(names[1], '우리끼리의 공격 계획')
+                rendered = self.ui.render(session)
+            self.assertEqual(rendered[self.ui.send_button]['interactive'], human_mafia)
+            chat = str(rendered[self.ui.chat_payload])
+            if human_mafia:
+                self.assertIn('동료 마피아: Player 2', chat)
+                self.assertIn('우리끼리의 공격 계획', chat)
+                self.assertIn('비공개 의논', rendered[self.ui.status])
+                self.ui.send(key, '다른 대상을 생각해보자')
+                self.assertTrue(any(m.content == '다른 대상을 생각해보자'
+                                    for m in arena.environment.get_observation(names[1])))
+            else:
+                self.assertNotIn('우리끼리의 공격 계획', chat)
+                self.assertNotIn('동료 마피아:', chat)
+                self.assertIn('전송하지 못했습니다', self.ui.send(key, '끼어들기')[self.ui.feedback])
+            self.ui.clear(key)

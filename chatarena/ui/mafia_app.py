@@ -13,13 +13,19 @@ from .mafia_session import SessionRegistry
 ROLE_NAMES = {"mafia": "마피아", "doctor": "의사", "police": "경찰", "villager": "시민"}
 DEFAULT_MODEL = "gpt-6-luna"
 PHASE_NAMES = {
-    "NIGHT_MAFIA": "밤 · 마피아 행동",
+    "NIGHT_MAFIA": "밤 · 마피아 공격 투표",
+    "NIGHT_MAFIA_DISCUSSION": "밤 · 마피아 비공개 의논",
     "NIGHT_DOCTOR": "밤 · 의사 보호",
     "NIGHT_POLICE": "밤 · 경찰 조사",
     "DAY_DISCUSSION": "낮 · 자유 토론",
     "DAY_VOTING": "낮 · 투표",
 }
-MODERATOR_GUIDE = "토론을 중립적으로 진행하세요. 새로운 의견을 유도하되, 같은 주장이 반복되거나 충분히 토론했다면 투표로 넘어가세요."
+MODERATOR_GUIDE = (
+    "플레이어들이 스스로 토론하도록 두고, 기본적으로 개입하지 마세요. "
+    "새 근거나 질문·반박이 오가면 CONTINUE로 기다리세요. "
+    "충분한 반론 기회 후 같은 논점만 반복되거나 투표할 시점에만 END_DISCUSSION으로 종료하세요. "
+    "특정인을 지목하거나 발언을 시키지 말고, 발언 순서를 정하거나 안내문을 출력하지 마세요."
+)
 GLOBAL_PROMPT = (
     "마피아 게임에 참여하고 있습니다. 비밀 역할과 현재 단계의 지시를 따르세요. "
     "밤 행동, 투표, 토론을 포함한 모든 대사는 자연스러운 한국어로 짧게 1~3문장으로 말하세요. "
@@ -105,7 +111,7 @@ class MafiaUI:
                         temperature = gr.Slider(0, 2, value=0.7, step=0.1, label="응답 다양성")
                         tokens = gr.Slider(32, 16384, value=4096, step=1, label="최대 생성 토큰",
                                            info="추론 모델은 내부 추론 토큰도 포함합니다. 토큰 한도로 빈 응답이 발생하면 늘려주세요.")
-                    moderator_enabled = gr.Checkbox(False, label="토론 진행자 LLM 사용", info="꺼져 있어도 게임 안내와 투표 진행은 자동으로 처리됩니다.")
+                    moderator_enabled = gr.Checkbox(False, label="토론 종료 판단 LLM 사용", info="발언에 끼어들지 않고 반복·충분한 논의 여부를 판단해 투표로 넘깁니다. 꺼져 있어도 제한·침묵 시 자동 전환합니다.")
                     with gr.Group(visible=False) as moderator_settings:
                         moderator_model = gr.Textbox(value=DEFAULT_MODEL, label="진행자 모델")
                         moderator_guide = gr.Textbox(value=MODERATOR_GUIDE, lines=3, label="토론 진행 지침")
@@ -134,10 +140,10 @@ class MafiaUI:
                                            show_copy_button=True)
                     with gr.Row():
                         self.input = gr.Textbox(label="내 발언 / 행동", placeholder="게임을 시작해주세요.",
-                                                scale=5, interactive=False)
+                                                scale=5, interactive=False, elem_id="mafia-input")
                         self.send_button = gr.Button("전송", scale=1, interactive=False)
                     self.feedback = gr.Markdown("")
-                    gr.Markdown("낮 토론에는 언제든 끼어들 수 있습니다. 밤과 투표에는 자신의 차례에 행동하세요.")
+                    gr.Markdown("낮 토론과 마피아끼리의 비공개 의논에는 언제든 끼어들 수 있습니다. 밤 대상 선택과 투표는 자신의 차례에 진행하세요.")
             # Never make Chatbot an output of a polled backend event: Gradio 4
             # toggles its pending_message even when show_progress is hidden.
             self.chat_payload = gr.JSON(value=[], visible=False)
@@ -189,12 +195,13 @@ class MafiaUI:
             state = snap["status"]
             human = snap["human"]
             own_alive = human in env.alive_players
-            discussion = env.phase == "DAY_DISCUSSION"
+            discussion = env.is_discussion
+            participant = human in env.discussion_participants
             next_player = None if discussion or snap["terminal"] else env.get_next_player()
             can_send = bool(human and own_alive and not snap["terminal"] and
-                            (discussion or next_player == human))
+                            ((discussion and participant) or next_player == human))
             phase = PHASE_NAMES.get(env.phase, env.phase)
-            if human and env.phase.startswith("NIGHT_") and next_player != human:
+            if human and env.phase.startswith("NIGHT_") and next_player != human and not (discussion and participant):
                 phase = "밤 · 비공개 행동 진행"
             labels = {"paused": "일시정지", "running": "진행 중", "waiting_human": "입력 대기",
                       "waiting_capacity": "모델 호출 대기", "error": "오류 · 일시정지", "terminal": "게임 종료"}
@@ -217,6 +224,8 @@ class MafiaUI:
                           or env.phase == "DAY_VOTING" else "밤 행동을 처리하고 있습니다.")
             elif state == "waiting_human":
                 detail = "추가 발언을 기다리고 있습니다."
+            if human and env.phase.startswith("NIGHT_") and next_player != human and not participant:
+                detail = "밤의 비공개 행동이 진행 중입니다."
             status = f"**{env.day}일차 · {phase}** — {labels.get(state, state)}\n\n{detail}"
             identity = (f"**내 이름: {human} · 역할: {ROLE_NAMES[env.player_roles[human]]}**"
                         if human else "**전체 관전 모드** · 비밀 역할과 야간 행동도 표시됩니다.")
@@ -240,7 +249,8 @@ class MafiaUI:
                 content = f"**{html.escape(speaker)}{private}**\n\n{msg.content}"
                 messages.append((content, None) if human and msg.agent_name == human
                                 else (None, content))
-            placeholder = "토론 중 언제든 발언하세요." if discussion else "대상 이름을 포함해 행동을 입력하세요."
+            placeholder = ("동료 마피아에게만 전달됩니다. 언제든 의논하세요."
+                           if env.phase == "NIGHT_MAFIA_DISCUSSION" else "토론 중 언제든 발언하세요.") if discussion else "대상 이름을 포함해 행동을 입력하세요."
             if not can_send:
                 placeholder = "관전 중입니다." if not human else "자신의 행동 차례를 기다려주세요."
             return {

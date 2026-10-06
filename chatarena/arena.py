@@ -101,7 +101,7 @@ class Arena:
     def step(self) -> TimeStep:
         """Take a step in the game: one player takes an action and the environment updates."""
         if self.discussion is not None:
-            if (self.environment.phase != "DAY_DISCUSSION" and not self.environment.is_terminal()
+            if (not self.environment.is_discussion and not self.environment.is_terminal()
                     and self.environment.get_next_player() in self.discussion.human_names):
                 from .backends.human import HumanBackendError
                 raise HumanBackendError(self.environment.get_next_player())
@@ -143,7 +143,7 @@ class Arena:
 
     def next_is_human(self):
         """Check if the next player is human."""
-        if self.discussion is not None and self.environment.phase == "DAY_DISCUSSION":
+        if self.discussion is not None and self.environment.is_discussion:
             return False
         player_name = self.environment.get_next_player()
         player = self.name_to_player[player_name]

@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import re
 import sys
 from typing import Dict, List, Optional
 
@@ -157,13 +158,8 @@ class MafiaPolicyTrainer:
             if "REQUEST intent:" in prompt:
                 return "2"
             if "REQUEST speech:" in prompt:
-                return "I suspect Player 2 because of the voting."
-            # Mock generator for fast testing
-            if "Mafia" in prompt:
-                return "I choose to eliminate Player 2 <EOS>"
-            elif "vote" in prompt.lower():
-                return "I vote to eliminate Player 2 <EOS>"
-            return "I am innocent and helping the village. <EOS>"
+                return "다른 참가자의 의견을 더 듣고 싶습니다."
+            return self.mock_target_response(prompt)
 
         inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
         inputs = {key: value[:, -1536:] for key, value in inputs.items()}
@@ -184,15 +180,18 @@ class MafiaPolicyTrainer:
         if "REQUEST intent:" in prompt:
             return "1"
         if "REQUEST speech:" in prompt:
-            return "I want to hear the others before voting."
-        role = role_map.get(player_name, "villager") if role_map else "villager"
-        if role == "doctor":
-            return "I choose to protect Player 2 <EOS>"
-        elif role == "police":
-            return "I choose to investigate Player 1 <EOS>"
-        elif "vote" in prompt.lower():
-            return "I vote to eliminate Player 1 <EOS>"
-        return f"I am {player_name} and I am looking for the Mafia. <EOS>"
+            return "투표 전에 다른 참가자의 의견을 듣고 싶습니다."
+        return self.mock_target_response(prompt)
+
+    @staticmethod
+    def mock_target_response(prompt):
+        # Use the latest eligible list, whose order the environment shuffles.
+        # Never hard-code Player 1/2 or invent an action without a target.
+        lists = re.findall(r"(?:선택 가능한 생존자|생존자|조사 가능한 생존자|투표 가능한 대상): ([^\n]+)", prompt)
+        names = re.findall(r"Player \d+", lists[-1]) if lists else []
+        if not names:
+            raise ValueError("Mock policy could not find the current eligible targets")
+        return names[0]
 
     def compute_sequence_log_probs(self, prompt: str, response: str) -> torch.Tensor:
         from training.mafia_policy_gradient import sequence_log_prob

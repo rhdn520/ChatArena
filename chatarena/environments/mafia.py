@@ -56,6 +56,9 @@ class Mafia(Environment):
         repeat_speaker_factor: float = 0.5,
         seed: Optional[int] = None,
         discussion_moderator=None,
+        mafia_discussion_messages: int = 8,
+        mafia_intent_rounds: int = 16,
+        mafia_discussion_seconds: float = 60,
         **kwargs,
     ):
         super().__init__(
@@ -71,6 +74,9 @@ class Mafia(Environment):
             repeat_speaker_factor=repeat_speaker_factor,
             seed=seed,
             discussion_moderator=discussion_moderator,
+            mafia_discussion_messages=mafia_discussion_messages,
+            mafia_intent_rounds=mafia_intent_rounds,
+            mafia_discussion_seconds=mafia_discussion_seconds,
             max_days=max_days,
             reveal_role_on_death=reveal_role_on_death,
             **kwargs,
@@ -101,7 +107,14 @@ class Mafia(Environment):
             raise ValueError("Invalid discussion limits or weights")
         self.seed = seed
         self.rng = random.Random(seed)
+        self.presentation_rng = random.Random(seed)
         self.discussion_moderator = discussion_moderator
+        self.mafia_discussion_messages = int(mafia_discussion_messages)
+        self.mafia_intent_rounds = int(mafia_intent_rounds)
+        self.mafia_discussion_seconds = float(mafia_discussion_seconds)
+        if (self.mafia_discussion_messages < 1 or self.mafia_intent_rounds < 1
+                or not math.isfinite(self.mafia_discussion_seconds) or self.mafia_discussion_seconds <= 0):
+            raise ValueError("Invalid Mafia discussion limits")
         self.max_days = max(1, int(max_days))
         self.reveal_role_on_death = bool(reveal_role_on_death)
 
@@ -166,6 +179,12 @@ class Mafia(Environment):
             player: roles_list[i] for i, player in enumerate(self.player_names)
         }
 
+    def randomized_names(self, names):
+        """Randomize prompt order independently of roles and gameplay draws."""
+        ordered = sorted(names)
+        self.presentation_rng.shuffle(ordered)
+        return ordered
+
     def _get_players_by_role(self, role: str, alive_only: bool = True) -> List[str]:
         return [
             name
@@ -215,7 +234,7 @@ class Mafia(Environment):
 
         intro = (
             f"마피아 게임에 오신 것을 환영합니다! 참가자는 총 {len(self.player_names)}명입니다: "
-            f"{', '.join(self.player_names)}.\n"
+            f"{', '.join(self.randomized_names(self.player_names))}.\n"
             f"역할 구성: {summary_str}.\n"
             "게임 규칙:\n"
             "- 밤과 낮이 번갈아 진행됩니다.\n"
@@ -260,6 +279,24 @@ class Mafia(Environment):
 
         # Queue alive mafia players
         alive_mafia = self._get_players_by_role(MAFIA, alive_only=True)
+        if len(alive_mafia) > 1:
+            self.phase = "NIGHT_MAFIA_DISCUSSION"
+            self._current_actor = None
+            self._action_queue = []
+            self.discussion_messages = 0
+            self.last_speaker = None
+            self.discussion_end_reason = None
+            self._moderator_speak(
+                "마피아 비공개 의논을 시작합니다. 동료와 오늘 밤 공격할 대상을 상의하세요. "
+                "이 대화는 생존 마피아에게만 보입니다. 의논 후 각자 한 표씩 투표하며, "
+                "최다 득표 대상을 공격합니다. 동률이면 공동 최다 득표자 중 무작위로 결정합니다.",
+                visible_to=alive_mafia,
+            )
+        else:
+            self._start_mafia_selection()
+
+    def _start_mafia_selection(self):
+        alive_mafia = self._get_players_by_role(MAFIA, alive_only=True)
         if alive_mafia:
             self.phase = "NIGHT_MAFIA"
             self._action_queue = list(alive_mafia)
@@ -268,8 +305,9 @@ class Mafia(Environment):
             if not valid_targets:
                 valid_targets = list(self.alive_players)
             prompt = (
+                "공격 대상 투표를 시작합니다. 생존 마피아가 순서대로 한 표씩 투표합니다.\n"
                 f"{self._current_actor}(마피아), 오늘 밤 제거할 생존 시민을 선택하세요.\n"
-                f"선택 가능한 생존자: {', '.join(valid_targets)}.\n"
+                f"선택 가능한 생존자: {', '.join(self.randomized_names(valid_targets))}.\n"
                 "한국어로 응답하세요. 형식: '[대상 이름]을 제거하겠습니다.' 대상 이름은 표시된 그대로 쓰세요."
             )
             self._moderator_speak(prompt, visible_to=alive_mafia)
@@ -286,7 +324,7 @@ class Mafia(Environment):
                 self._current_actor = self._action_queue.pop(0)
                 prompt = (
                     f"{self._current_actor}(의사), 오늘 밤 보호할 생존자를 선택하세요.\n"
-                    f"생존자: {', '.join(sorted(self.alive_players))}.\n"
+                    f"생존자: {', '.join(self.randomized_names(self.alive_players))}.\n"
                     "한국어로 응답하세요. 형식: '[대상 이름]을 보호하겠습니다.' 대상 이름은 표시된 그대로 쓰세요."
                 )
                 self._moderator_speak(prompt, visible_to=[self._current_actor])
@@ -301,7 +339,7 @@ class Mafia(Environment):
                 other_living = [p for p in self.alive_players if p != self._current_actor]
                 prompt = (
                     f"{self._current_actor}(경찰), 오늘 밤 조사할 생존자를 선택하세요.\n"
-                    f"조사 가능한 생존자: {', '.join(sorted(other_living))}.\n"
+                    f"조사 가능한 생존자: {', '.join(self.randomized_names(other_living))}.\n"
                     "한국어로 응답하세요. 형식: '[대상 이름]을 조사하겠습니다.' 대상 이름은 표시된 그대로 쓰세요."
                 )
                 self._moderator_speak(prompt, visible_to=[self._current_actor])
@@ -344,7 +382,7 @@ class Mafia(Environment):
             return
 
         # Start Day Discussion
-        alive_list = sorted(list(self.alive_players))
+        alive_list = self.randomized_names(self.alive_players)
         self.phase = "DAY_DISCUSSION"
         self._action_queue = []
         self._current_actor = None
@@ -360,15 +398,28 @@ class Mafia(Environment):
     def timestep(self) -> TimeStep:
         return TimeStep(list(self.get_observation()), self.get_rewards(), self.is_terminal())
 
+    @property
+    def is_discussion(self):
+        return self.phase in ("DAY_DISCUSSION", "NIGHT_MAFIA_DISCUSSION")
+
+    @property
+    def discussion_participants(self):
+        if self.phase == "NIGHT_MAFIA_DISCUSSION":
+            return set(self._get_players_by_role(MAFIA))
+        return set(self.alive_players) if self.phase == "DAY_DISCUSSION" else set()
+
     def discussion_speak(self, player_name: str, text: str) -> TimeStep:
-        if (self.is_terminal() or self.phase != "DAY_DISCUSSION"
-                or player_name not in self.alive_players or not text.strip()):
+        if (self.is_terminal() or not self.is_discussion
+                or player_name not in self.discussion_participants or not text.strip()):
             raise ValueError("Only living players can speak during discussion")
         self._current_turn += 1
         self.version += 1
         self.discussion_messages += 1
         self.last_speaker = player_name
-        self.message_pool.append_message(Message(player_name, text.strip(), self._current_turn))
+        visible_to = (sorted(self.discussion_participants)
+                      if self.phase == "NIGHT_MAFIA_DISCUSSION" else "all")
+        self.message_pool.append_message(Message(player_name, text.strip(), self._current_turn,
+                                                 visible_to=visible_to))
         return self.timestep()
 
     def discussion_announce(self, text: str):
@@ -379,12 +430,15 @@ class Mafia(Environment):
         self._moderator_speak(text)
 
     def end_discussion(self, reason: str):
-        if self.phase != "DAY_DISCUSSION" or self.is_terminal():
+        if not self.is_discussion or self.is_terminal():
             raise ValueError("Discussion is not active")
         self.discussion_end_reason = reason
-        self.discussion_endings.append({"day": self.day, "reason": reason})
+        self.discussion_endings.append({"day": self.day, "phase": self.phase, "reason": reason})
         self.version += 1
-        self._start_voting_phase()
+        if self.phase == "NIGHT_MAFIA_DISCUSSION":
+            self._start_mafia_selection()
+        else:
+            self._start_voting_phase()
 
     def print(self):
         self.message_pool.print()
@@ -392,7 +446,7 @@ class Mafia(Environment):
     def _start_voting_phase(self):
         self.phase = "DAY_VOTING"
         self.votes = {}
-        alive_list = sorted(list(self.alive_players))
+        alive_list = self.randomized_names(self.alive_players)
         self._action_queue = list(alive_list)
         self._current_actor = self._action_queue.pop(0)
         self._moderator_speak(
@@ -477,41 +531,24 @@ class Mafia(Environment):
         return False
 
     def _parse_target(self, text: str, candidates: List[str]) -> Optional[str]:
-        """Extract target player name from action text using pattern matching."""
-        if not text or not candidates:
-            return None
+        """Match whole names/aliases and use the last actual mention's position.
 
-        # 1. Regex check for explicit structured format: [eliminate/vote/protect/target] Player X
-        regex_pattern = r"(?:vote|eliminate|kill|protect|heal|investigate|target)(?:\s+to|\s+for)?\s*:?\s*(?:\[|\()?([a-zA-Z0-9_\s]+)(?:\]|\))?"
-        matches = re.findall(regex_pattern, text, re.IGNORECASE)
-        for m in matches:
-            m_clean = m.strip().lower()
-            for cand in candidates:
-                if cand.lower() == m_clean or cand.lower().replace(" ", "") == m_clean.replace(" ", ""):
-                    return cand
-
-        # 2. Substring matching against candidates
-        text_lower = text.lower()
-        matched = []
-        for cand in candidates:
-            cand_variants = [
-                cand.lower(),
-                cand.lower().replace(" ", ""),
-                cand.lower().replace(" ", "_"),
-            ]
-            if any(v in text_lower for v in cand_variants):
-                matched.append(cand)
-
-        if matched:
-            # Pick the candidate mentioned latest in the text if multiple
-            return max(matched, key=lambda c: text_lower.rfind(c.lower()))
-
-        # 3. Fallback: random candidate from valid list
-        return self.rng.choice(sorted(candidates)) if candidates else None
+        A numeric suffix cannot be a prefix of another player (1 vs 10).
+        Korean particles may directly follow a name. Never invent a target
+        when the model did not name an eligible player.
+        """
+        matches = []
+        for candidate in candidates:
+            parts = re.split(r"[\s_]+", candidate.strip())
+            alias = r"[\s_]*".join(re.escape(part) for part in parts)
+            pattern = r"(?<!\w)" + alias + r"(?![A-Za-z0-9_])"
+            for match in re.finditer(pattern, text or "", re.IGNORECASE):
+                matches.append((match.start(), len(match.group()), candidate))
+        return max(matches)[2] if matches else None
 
     def get_next_player(self) -> str:
         """Returns the player whose turn it is to act."""
-        if self.phase == "DAY_DISCUSSION":
+        if self.is_discussion:
             raise RuntimeError("Discussion speakers are selected by MafiaDiscussionController")
         if self._current_actor is not None:
             return self._current_actor
@@ -563,11 +600,19 @@ class Mafia(Environment):
     def step(self, player_name: str, action: str) -> TimeStep:
         if self.is_terminal():
             raise ValueError("Game has ended")
-        if self.phase == "DAY_DISCUSSION":
+        if self.is_discussion:
             return self.discussion_speak(player_name, action)
         assert (
             player_name == self.get_next_player()
         ), f"Turn error! Expected {self.get_next_player()}, got {player_name}."
+
+        candidates = list(self.alive_players)
+        if self.phase == "NIGHT_MAFIA":
+            candidates = [p for p in candidates if self.player_roles[p] != MAFIA]
+        elif self.phase == "NIGHT_POLICE":
+            candidates = [p for p in candidates if p != player_name]
+        if self._parse_target(action, candidates) is None:
+            raise ValueError("선택 가능한 대상 이름을 정확히 포함해주세요. 임의로 대상을 선택하지 않습니다.")
 
         self.version += 1
         self._current_turn += 1
@@ -594,6 +639,16 @@ class Mafia(Environment):
                 self._current_actor = self._action_queue.pop(0)
             else:
                 self._current_actor = None
+                if self.night_kills:
+                    counts = {name: self.night_kills.count(name) for name in set(self.night_kills)}
+                    top = max(counts.values())
+                    tied = sorted(name for name, count in counts.items() if count == top)
+                    chosen = self.rng.choice(tied)
+                    self.night_kills = [chosen]
+                    self._moderator_speak(
+                        f"공격 대상 투표 결과: " + ", ".join(f"{n}: {counts[n]}표" for n in sorted(counts))
+                        + (". 동률이므로 무작위로 결정했습니다." if len(tied) > 1 else ".")
+                        + f" 최종 공격 대상은 {chosen}입니다.", visible_to=alive_mafia)
                 self._advance_night_roles()
 
         elif self.phase == "NIGHT_DOCTOR":
