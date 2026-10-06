@@ -182,6 +182,18 @@ out [`PettingzooChess` environment](chatarena/environments/pettingzoo_chess.py) 
 
 ## List of Environments
 
+### Mafia
+
+Run the dedicated Korean Mafia UI (port 8081):
+
+```bash
+conda run --no-capture-output -n chatarena_37 python -u mafia_app.py
+```
+
+Choose whether to play as Player 1 or spectate, set the AI model, and optionally enable the discussion moderator. The original `app.py` remains the general-purpose UI.
+
+Mafia supports private night actions, intent-based daytime discussion, optional LLM moderation, and human interruptions in the web UI. See the [Mafia discussion pipeline (한국어)](docs/devdoc/mafia_discussion_pipeline.md) for configuration, execution, RL training, and tests.
+
 ### [Conversation](chatarena/environments/conversation.py)
 
 A multi-player language game environment that simulates a

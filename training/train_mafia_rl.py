@@ -10,24 +10,20 @@ calculates rewards, and optimizes the policy using Group Relative Policy Optimiz
 from __future__ import annotations
 
 import argparse
-import logging
 import os
 import sys
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 # Ensure local repository takes precedence over installed package
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 try:
     import torch
-    import torch.nn.functional as F
     TORCH_AVAILABLE = True
 except ImportError:
     torch = None
-    F = None
     TORCH_AVAILABLE = False
 
-from chatarena.environments.mafia import MAFIA, Mafia
 from chatarena.rl.mafia_rollout import MafiaEpisodeResult, MafiaRolloutManager
 
 
@@ -52,6 +48,10 @@ def parse_args():
     parser.add_argument("--min_players", type=int, default=4, help="Minimum player count when dynamic sampling is enabled")
     parser.add_argument("--max_players", type=int, default=6, help="Maximum player count when dynamic sampling is enabled")
     parser.add_argument("--dynamic_players", action="store_true", help="Randomize player count (min_players ~ max_players) each game episode")
+    parser.add_argument("--max_discussion_messages", type=int, default=24)
+    parser.add_argument("--max_intent_rounds", type=int, default=48)
+    parser.add_argument("--max_total_steps", type=int, default=500)
+    parser.add_argument("--seed", type=int, default=None)
     parser.add_argument("--lr", type=float, default=5e-6, help="Learning rate")
     parser.add_argument("--lora_r", type=int, default=16, help="LoRA rank")
     parser.add_argument("--lora_alpha", type=int, default=32, help="LoRA alpha")
@@ -144,13 +144,20 @@ class MafiaPolicyTrainer:
             min_players=args.min_players,
             max_players=args.max_players,
             dynamic_player_count=args.dynamic_players,
-            discussion_rounds=1,
+            max_discussion_messages=args.max_discussion_messages,
+            max_intent_rounds=args.max_intent_rounds,
+            max_total_steps=args.max_total_steps,
+            seed=args.seed,
             max_days=3,
         )
 
     def generate_response(self, prompt: str) -> str:
         """Generate response from the learner model."""
         if self.args.dry_run or self.model is None:
+            if "REQUEST intent:" in prompt:
+                return "2"
+            if "REQUEST speech:" in prompt:
+                return "I suspect Player 2 because of the voting."
             # Mock generator for fast testing
             if "Mafia" in prompt:
                 return "I choose to eliminate Player 2 <EOS>"
@@ -158,7 +165,8 @@ class MafiaPolicyTrainer:
                 return "I vote to eliminate Player 2 <EOS>"
             return "I am innocent and helping the village. <EOS>"
 
-        inputs = self.tokenizer(prompt, return_tensors="pt", truncation=True, max_length=1536).to(self.device)
+        inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
+        inputs = {key: value[:, -1536:] for key, value in inputs.items()}
         with torch.no_grad():
             outputs = self.model.generate(
                 **inputs,
@@ -173,6 +181,10 @@ class MafiaPolicyTrainer:
 
     def generate_opponent_response(self, player_name: str, prompt: str, role_map: Optional[Dict[str, str]] = None) -> str:
         """Baseline opponent response generator (simple rule/heuristic or fixed prompt)."""
+        if "REQUEST intent:" in prompt:
+            return "1"
+        if "REQUEST speech:" in prompt:
+            return "I want to hear the others before voting."
         role = role_map.get(player_name, "villager") if role_map else "villager"
         if role == "doctor":
             return "I choose to protect Player 2 <EOS>"
@@ -183,62 +195,15 @@ class MafiaPolicyTrainer:
         return f"I am {player_name} and I am looking for the Mafia. <EOS>"
 
     def compute_sequence_log_probs(self, prompt: str, response: str) -> torch.Tensor:
-        """Calculates token log probabilities for a (prompt, response) pair."""
-        full_text = prompt + response
-        prompt_enc = self.tokenizer(prompt, return_tensors="pt")
-        full_enc = self.tokenizer(full_text, return_tensors="pt").to(self.device)
-
-        prompt_len = prompt_enc["input_ids"].shape[1]
-        input_ids = full_enc["input_ids"]
-        target_ids = input_ids.clone()
-        target_ids[:, :prompt_len] = -100  # Mask out prompt tokens
-
-        logits = self.model(input_ids).logits
-        shift_logits = logits[:, :-1, :].contiguous()
-        shift_labels = target_ids[:, 1:].contiguous()
-
-        loss = F.cross_entropy(
-            shift_logits.view(-1, shift_logits.size(-1)),
-            shift_labels.view(-1),
-            reduction="none",
-            ignore_index=-100,
-        )
-        return -loss.sum()  # Total log prob of response tokens
+        from training.mafia_policy_gradient import sequence_log_prob
+        return sequence_log_prob(self.model, self.tokenizer, self.device, prompt, response)
 
     def train_step_grpo(self, group_results: List[MafiaEpisodeResult]):
-        """
-        Updates the policy using Group Relative Policy Optimization (GRPO).
-        Normalizes rewards within the group to estimate advantages without a critic.
-        """
         if self.args.dry_run or self.optimizer is None:
             return 0.0
-
-        rewards = torch.tensor(
-            [res.trajectories[self.learner_player].shaped_reward for res in group_results],
-            device=self.device,
-            dtype=torch.float32,
-        )
-        mean_r = rewards.mean()
-        std_r = rewards.std() + 1e-8
-        advantages = (rewards - mean_r) / std_r
-
-        self.optimizer.zero_grad()
-        total_loss = 0.0
-
-        for i, res in enumerate(group_results):
-            adv = advantages[i]
-            traj = res.trajectories[self.learner_player]
-
-            for turn in traj.turns:
-                log_prob = self.compute_sequence_log_probs(turn.prompt, turn.response)
-                # Policy gradient loss: - advantage * log_prob
-                loss = -adv * log_prob / len(traj.turns)
-                loss.backward()
-                total_loss += loss.item()
-
-        torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
-        self.optimizer.step()
-        return total_loss / len(group_results)
+        from training.mafia_policy_gradient import update_policy
+        return update_policy(self.model, self.optimizer, self.device, self.learner_player,
+                             group_results, self.compute_sequence_log_probs)
 
     def train(self):
         print(f"\n--- Starting Mafia RL Training ({self.args.num_episodes} episodes) ---")
@@ -246,6 +211,7 @@ class MafiaPolicyTrainer:
 
         learner_wins = 0
         total_episodes = 0
+        truncated_episodes = 0
 
         for epoch in range(self.args.num_episodes // self.args.group_size):
             group_results: List[MafiaEpisodeResult] = []
@@ -265,18 +231,28 @@ class MafiaPolicyTrainer:
                     player_names=curr_names,
                 )
                 group_results.append(res)
-                if res.trajectories[self.learner_player].won:
-                    learner_wins += 1
-                total_episodes += 1
+                if res.truncated:
+                    truncated_episodes += 1
+                else:
+                    if res.trajectories[self.learner_player].won:
+                        learner_wins += 1
+                    total_episodes += 1
 
             # Optimize policy
             loss = self.train_step_grpo(group_results)
-            win_rate = (learner_wins / total_episodes) * 100.0
-            avg_reward = sum(r.trajectories[self.learner_player].shaped_reward for r in group_results) / len(group_results)
+            win_rate = (learner_wins / max(1, total_episodes)) * 100.0
+            completed = [r for r in group_results if not r.truncated]
+            avg_reward = sum(r.trajectories[self.learner_player].shaped_reward for r in completed) / max(1, len(completed))
+            import json
+            with open(os.path.join(self.args.output_dir, "episodes.jsonl"), "a", encoding="utf-8") as log:
+                for result in group_results:
+                    log.write(json.dumps({"winner": result.winner, "reason": result.termination_reason,
+                                          "diagnostics": result.diagnostics,
+                                          "discussion_endings": result.discussion_endings}) + "\n")
 
             print(
                 f"Epoch {epoch + 1:3d} | "
-                f"Episodes: {total_episodes:4d} | "
+                f"Completed: {total_episodes:4d} | Truncated: {truncated_episodes} | "
                 f"Avg Group Reward: {avg_reward:+.3f} | "
                 f"Cumulative Win Rate: {win_rate:5.1f}% | "
                 f"Loss: {loss:.4f}"

@@ -1,17 +1,20 @@
 {
   "name": "Mafia",
-  "global_prompt": "You are playing a game of Mafia. The Moderator will announce the phases (Night, Day discussion, and Voting) and give you your secret role. Follow the Moderator's instructions carefully.\n\nRules:\n1. Keep your secret role in mind and pursue your team's objective (Mafia vs Citizens).\n2. At Night, special roles act secretly.\n3. During the Day, all living players discuss and share clues.\n4. During Voting, vote to eliminate a suspected Mafia member using the format: 'I vote to eliminate [Player Name]'.\n5. Always end your response with <EOS>.",
+  "global_prompt": "마피아 게임에 참여하고 있습니다. 사회자가 알려주는 비밀 역할과 밤·낮 토론·투표 단계의 지시를 따르세요. 자신의 팀이 승리하도록 행동하며 모든 대사는 한국어로 짧게 말하세요. 대상 이름은 표시된 그대로 사용하세요. 밤에는 자신의 역할에 따라 한 명을 제거·보호·조사하고, 투표할 때는 한 명을 지목해 \"[대상 이름]에게 투표합니다.\"라고 답하세요. 발언 의향 요청에는 0~3 중 숫자 하나만 출력하세요. 토론 발언 요청에는 한국어 대사 또는 PASS만 출력하세요. 다른 사람이나 사회자를 사칭하지 마세요.",
   "environment": {
     "env_type": "mafia",
     "parallel": false,
-    "discussion_rounds": 1,
     "max_days": 5,
-    "reveal_role_on_death": true
+    "reveal_role_on_death": true,
+    "max_discussion_messages": 24,
+    "max_intent_rounds": 48,
+    "discussion_seconds": 180,
+    "silence_seconds": 10
   },
   "players": [
     {
       "name": "Player 1",
-      "role_desc": "You are Player 1. Follow the Moderator's instructions. Do not pretend to be other players or the Moderator. State your intentions clearly.",
+      "role_desc": "당신은 Player 1입니다. 사회자의 지시를 따르고 한국어로 명확하게 의사를 표현하세요. 다른 플레이어나 사회자를 사칭하지 마세요.",
       "backend": {
         "backend_type": "openai-chat",
         "temperature": 0.7,
@@ -20,7 +23,7 @@
     },
     {
       "name": "Player 2",
-      "role_desc": "You are Player 2. Follow the Moderator's instructions. Do not pretend to be other players or the Moderator. State your intentions clearly.",
+      "role_desc": "당신은 Player 2입니다. 사회자의 지시를 따르고 한국어로 명확하게 의사를 표현하세요. 다른 플레이어나 사회자를 사칭하지 마세요.",
       "backend": {
         "backend_type": "openai-chat",
         "temperature": 0.7,
@@ -29,7 +32,7 @@
     },
     {
       "name": "Player 3",
-      "role_desc": "You are Player 3. Follow the Moderator's instructions. Do not pretend to be other players or the Moderator. State your intentions clearly.",
+      "role_desc": "당신은 Player 3입니다. 사회자의 지시를 따르고 한국어로 명확하게 의사를 표현하세요. 다른 플레이어나 사회자를 사칭하지 마세요.",
       "backend": {
         "backend_type": "openai-chat",
         "temperature": 0.7,
@@ -38,7 +41,7 @@
     },
     {
       "name": "Player 4",
-      "role_desc": "You are Player 4. Follow the Moderator's instructions. Do not pretend to be other players or the Moderator. State your intentions clearly.",
+      "role_desc": "당신은 Player 4입니다. 사회자의 지시를 따르고 한국어로 명확하게 의사를 표현하세요. 다른 플레이어나 사회자를 사칭하지 마세요.",
       "backend": {
         "backend_type": "openai-chat",
         "temperature": 0.7,
@@ -47,4 +50,3 @@
     }
   ]
 }
-

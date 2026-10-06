@@ -1,8 +1,11 @@
 import os
+import hashlib
+import logging
+import threading
 import re
 from typing import List
 
-from tenacity import retry, stop_after_attempt, wait_random_exponential
+from tenacity import retry, retry_if_exception, stop_after_attempt, wait_random_exponential
 
 from ..message import SYSTEM_NAME, Message
 from .base import IntelligenceBackend, register_backend
@@ -29,6 +32,19 @@ DEFAULT_MODEL = "gpt-3.5-turbo"
 END_OF_MESSAGE = "<EOS>"  # End of message token specified by us not OpenAI
 STOP = ("<|endoftext|>", END_OF_MESSAGE)  # End of sentence token
 BASE_PROMPT = f"The messages always end with the token {END_OF_MESSAGE}."
+
+
+def _retryable_error(exc):
+    return isinstance(exc, openai.APIConnectionError) or (
+        isinstance(exc, openai.APIStatusError)
+        and (exc.status_code in (408, 409, 429) or exc.status_code >= 500)
+    )
+
+
+# Share confirmed option rejections across player backends using the same
+# client/model/settings. Protect only cache access, never the network call.
+_CAPABILITY_LOCK = threading.Lock()
+_UNSUPPORTED_OPTIONS = {}
 
 
 @register_backend
@@ -69,21 +85,81 @@ class OpenAIChat(IntelligenceBackend):
         self.temperature = temperature
         self.max_tokens = max_tokens
         self.model = model
+        self._token_parameter = "max_completion_tokens"
         self.merge_other_agent_as_user = merge_other_agents_as_one_user
 
-    @retry(stop=stop_after_attempt(6), wait=wait_random_exponential(min=1, max=60))
+    @staticmethod
+    def format_messages(agent_name, system_prompt, history_messages, request_msg=None):
+        def participant_name(name):
+            return "player_" + hashlib.sha256(name.encode("utf-8")).hexdigest()[:24]
+
+        messages = [{"role": "system", "content": system_prompt}]
+        for msg in history_messages:
+            if msg.agent_name == SYSTEM_NAME:
+                messages.append({"role": "system", "content": msg.content})
+            else:
+                messages.append({
+                    "role": "assistant" if msg.agent_name == agent_name else "user",
+                    "name": participant_name(msg.agent_name),
+                    "content": f"[{msg.agent_name}]: {msg.content}{END_OF_MESSAGE}",
+                })
+        messages.append({
+            "role": "system",
+            "content": request_msg.content if request_msg else f"Now you speak, {agent_name}.",
+        })
+        return messages
+
+    @retry(stop=stop_after_attempt(6), wait=wait_random_exponential(min=1, max=60),
+           retry=retry_if_exception(_retryable_error))
     def _get_response(self, messages):
-        completion = client.chat.completions.create(
-            model=self.model,
-            messages=messages,
-            temperature=self.temperature,
-            max_tokens=self.max_tokens,
-            stop=STOP,
-        )
+        # Keep max_tokens in saved arena configs; translate at the API boundary.
+        # Cache explicit capability rejections so subsequent turns avoid them.
+        while True:
+            options = {"temperature": self.temperature, "stop": STOP}
+            capability_key = (client, self.model, self.temperature)
+            with _CAPABILITY_LOCK:
+                unsupported = set(_UNSUPPORTED_OPTIONS.get(capability_key, ()))
+            for option in unsupported:
+                options.pop(option, None)
+            options[self._token_parameter] = self.max_tokens
+            try:
+                completion = client.chat.completions.create(
+                    model=self.model, messages=messages, **options)
+                break
+            except openai.BadRequestError as exc:
+                body = exc.body if isinstance(exc.body, dict) else {}
+                error = body.get("error", body)
+                parameter = error.get("param")
+                code = error.get("code")
+                if code not in ("unsupported_parameter", "unsupported_value"):
+                    raise
+                if parameter == "max_completion_tokens" and self._token_parameter == parameter:
+                    self._token_parameter = "max_tokens"
+                elif parameter in ("temperature", "stop") and parameter in options:
+                    with _CAPABILITY_LOCK:
+                        unsupported = _UNSUPPORTED_OPTIONS.setdefault(capability_key, set())
+                        first_rejection = parameter not in unsupported
+                        unsupported.add(parameter)
+                    if first_rejection:
+                        logging.warning("Model %s rejected %s; using its default behavior "
+                                        "for all players with these settings",
+                                        self.model, parameter)
+                else:
+                    raise
 
         response = completion.choices[0].message.content
-        response = response.strip()
-        return response
+        if not response or not response.strip():
+            reason = completion.choices[0].finish_reason
+            if reason == "length":
+                suggested_limit = max(4096, self.max_tokens * 2)
+                raise ValueError(
+                    f"Model {self.model} returned no text (finish_reason=length, "
+                    f"token_limit={self.max_tokens}). Please increase the token limit. "
+                    f"UI의 'AI 응답 설정 → 최대 생성 토큰'을 {suggested_limit} 이상으로 "
+                    "늘린 뒤 초기화하여 새 게임을 시작해주세요. 내부 추론도 한도에 포함됩니다."
+                )
+            raise ValueError(f"Model {self.model} returned no text (finish_reason={reason}).")
+        return response.strip()
 
     def query(
         self,
@@ -112,51 +188,7 @@ class OpenAIChat(IntelligenceBackend):
         else:
             system_prompt = f"You are a helpful assistant. Your name is {agent_name}.\n\nYour role:{role_desc}\n\n{BASE_PROMPT}"
 
-        all_messages = [(SYSTEM_NAME, system_prompt)]
-        for msg in history_messages:
-            if msg.agent_name == SYSTEM_NAME:
-                all_messages.append((SYSTEM_NAME, msg.content))
-            else:  # non-system messages are suffixed with the end of message token
-                all_messages.append((msg.agent_name, f"{msg.content}{END_OF_MESSAGE}"))
-
-        if request_msg:
-            all_messages.append((SYSTEM_NAME, request_msg.content))
-        else:  # The default request message that reminds the agent its role and instruct it to speak
-            all_messages.append(
-                (SYSTEM_NAME, f"Now you speak, {agent_name}.{END_OF_MESSAGE}")
-            )
-
-        messages = []
-        for i, msg in enumerate(all_messages):
-            if i == 0:
-                assert (
-                    msg[0] == SYSTEM_NAME
-                )  # The first message should be from the system
-                messages.append({"role": "system", "content": msg[1]})
-            else:
-                if msg[0] == agent_name:
-                    messages.append({"role": "assistant", "content": msg[1]})
-                else:
-                    if messages[-1]["role"] == "user":  # last message is from user
-                        if self.merge_other_agent_as_user:
-                            messages[-1][
-                                "content"
-                            ] = f"{messages[-1]['content']}\n\n[{msg[0]}]: {msg[1]}"
-                        else:
-                            messages.append(
-                                {"role": "user", "content": f"[{msg[0]}]: {msg[1]}"}
-                            )
-                    elif (
-                        messages[-1]["role"] == "assistant"
-                    ):  # consecutive assistant messages
-                        # Merge the assistant messages
-                        messages[-1]["content"] = f"{messages[-1]['content']}\n{msg[1]}"
-                    elif messages[-1]["role"] == "system":
-                        messages.append(
-                            {"role": "user", "content": f"[{msg[0]}]: {msg[1]}"}
-                        )
-                    else:
-                        raise ValueError(f"Invalid role: {messages[-1]['role']}")
+        messages = self.format_messages(agent_name, system_prompt, history_messages, request_msg)
 
         response = self._get_response(messages, *args, **kwargs)
 

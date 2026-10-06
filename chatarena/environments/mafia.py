@@ -1,8 +1,10 @@
 from __future__ import annotations
 
-import logging
+import math
 import random
 import re
+import uuid
+import warnings
 from typing import Dict, List, Optional, Set, Union
 
 from ..agent import SIGNAL_END_OF_CONVERSATION
@@ -15,11 +17,13 @@ DOCTOR = "doctor"
 POLICE = "police"
 VILLAGER = "villager"
 
+ROLE_NAMES = {MAFIA: "마피아", DOCTOR: "의사", POLICE: "경찰", VILLAGER: "시민"}
+
 DEFAULT_ROLE_DESCRIPTIONS = {
-    MAFIA: "Eliminate citizens during the night and blend in during the day to avoid detection.",
-    DOCTOR: "Protect one player from being eliminated each night.",
-    POLICE: "Investigate one player each night to determine whether they are a member of the Mafia.",
-    VILLAGER: "Discuss clues with other players during the day and vote to eliminate suspected Mafia members.",
+    MAFIA: "밤에는 시민을 제거하고, 낮에는 정체를 숨기며 시민 사이에 섞여 행동하세요.",
+    DOCTOR: "매일 밤 한 명을 선택해 마피아의 공격으로부터 보호하세요.",
+    POLICE: "밤의 경찰 차례에 한 명을 조사해 마피아인지 확인하세요. 낮에는 새 조사를 할 수 없으며, 지난밤 결과를 공개할지는 스스로 결정하세요.",
+    VILLAGER: "낮에 다른 참가자와 단서를 토론하고, 마피아로 의심되는 사람에게 투표하세요.",
 }
 
 
@@ -41,9 +45,17 @@ class Mafia(Environment):
         role_counts: Optional[Dict[str, int]] = None,
         role_mapping: Optional[Dict[str, str]] = None,
         role_descriptions: Optional[Dict[str, str]] = None,
-        discussion_rounds: int = 1,
+        discussion_rounds: Optional[int] = None,
         max_days: int = 5,
         reveal_role_on_death: bool = True,
+        max_discussion_messages: int = 24,
+        max_intent_rounds: int = 48,
+        discussion_seconds: float = 180,
+        silence_seconds: float = 10,
+        intent_weights=None,
+        repeat_speaker_factor: float = 0.5,
+        seed: Optional[int] = None,
+        discussion_moderator=None,
         **kwargs,
     ):
         super().__init__(
@@ -51,7 +63,14 @@ class Mafia(Environment):
             role_counts=role_counts,
             role_mapping=role_mapping,
             role_descriptions=role_descriptions,
-            discussion_rounds=discussion_rounds,
+            max_discussion_messages=max_discussion_messages,
+            max_intent_rounds=max_intent_rounds,
+            discussion_seconds=discussion_seconds,
+            silence_seconds=silence_seconds,
+            intent_weights=intent_weights,
+            repeat_speaker_factor=repeat_speaker_factor,
+            seed=seed,
+            discussion_moderator=discussion_moderator,
             max_days=max_days,
             reveal_role_on_death=reveal_role_on_death,
             **kwargs,
@@ -64,7 +83,25 @@ class Mafia(Environment):
             if role_descriptions is not None
             else DEFAULT_ROLE_DESCRIPTIONS.copy()
         )
-        self.discussion_rounds = max(1, int(discussion_rounds))
+        if discussion_rounds is not None:
+            warnings.warn("discussion_rounds is ignored; Mafia uses intent-based discussion",
+                          FutureWarning, stacklevel=2)
+        self.max_discussion_messages = int(max_discussion_messages)
+        self.max_intent_rounds = int(max_intent_rounds)
+        self.discussion_seconds = float(discussion_seconds)
+        self.silence_seconds = float(silence_seconds)
+        self.intent_weights = tuple(intent_weights if intent_weights is not None else (0, 1, 4, 9))
+        self.repeat_speaker_factor = float(repeat_speaker_factor)
+        if (self.max_discussion_messages < 1 or self.max_intent_rounds < 1
+                or not math.isfinite(self.discussion_seconds) or self.discussion_seconds <= 0
+                or not math.isfinite(self.silence_seconds) or self.silence_seconds < 0
+                or len(self.intent_weights) != 4 or self.intent_weights[0] != 0
+                or any(not math.isfinite(w) or w <= 0 for w in self.intent_weights[1:])
+                or not 0 < self.repeat_speaker_factor <= 1):
+            raise ValueError("Invalid discussion limits or weights")
+        self.seed = seed
+        self.rng = random.Random(seed)
+        self.discussion_moderator = discussion_moderator
         self.max_days = max(1, int(max_days))
         self.reveal_role_on_death = bool(reveal_role_on_death)
 
@@ -124,7 +161,7 @@ class Mafia(Environment):
                 # 7 or more players: 2 mafias
                 roles_list = [MAFIA, MAFIA, DOCTOR, POLICE] + [VILLAGER] * (num_players - 4)
 
-        random.shuffle(roles_list)
+        self.rng.shuffle(roles_list)
         self.player_roles = {
             player: roles_list[i] for i, player in enumerate(self.player_names)
         }
@@ -146,6 +183,16 @@ class Mafia(Environment):
         self.message_pool.append_message(message)
 
     def reset(self) -> TimeStep:
+        self.session_id = uuid.uuid4().hex
+        self.version = 0
+        self.discussion_messages = 0
+        self.last_speaker = None
+        self.discussion_end_reason = None
+        self.discussion_endings = []
+        self.termination_reason = None
+        self.phase = "NIGHT_MAFIA"
+        self._current_actor = None
+        self._action_queue = []
         self.message_pool.reset()
         self.alive_players = set(self.player_names)
         self.day = 1
@@ -163,18 +210,18 @@ class Mafia(Environment):
         for r in self.player_roles.values():
             role_counts_summary[r] = role_counts_summary.get(r, 0) + 1
         summary_str = ", ".join(
-            f"{count} {role}(s)" for role, count in role_counts_summary.items()
+            f"{ROLE_NAMES.get(role, role)} {count}명" for role, count in role_counts_summary.items()
         )
 
         intro = (
-            f"Welcome to Mafia! There are {len(self.player_names)} players in this game: "
+            f"마피아 게임에 오신 것을 환영합니다! 참가자는 총 {len(self.player_names)}명입니다: "
             f"{', '.join(self.player_names)}.\n"
-            f"Role distribution: {summary_str}.\n"
-            "Rules:\n"
-            "- The game alternates between Night and Day.\n"
-            "- At Night, the Mafia chooses a player to eliminate. Special roles (Doctor, Police) may perform actions.\n"
-            "- During the Day, players discuss clues and vote to eliminate a suspected Mafia member.\n"
-            "- Citizens win if all Mafia are eliminated. Mafia wins when Mafia count equals or exceeds Citizens."
+            f"역할 구성: {summary_str}.\n"
+            "게임 규칙:\n"
+            "- 밤과 낮이 번갈아 진행됩니다.\n"
+            "- 밤에는 마피아가 제거할 대상을 선택하고, 의사는 보호, 경찰은 조사를 수행합니다.\n"
+            "- 낮에는 단서를 토론한 뒤 마피아로 의심되는 사람에게 투표해 탈락시킵니다.\n"
+            "- 마피아가 모두 탈락하면 시민 팀이 승리합니다. 생존 마피아 수가 나머지 생존자 수 이상이면 마피아 팀이 승리합니다."
         )
         self._moderator_speak(intro, visible_to="all")
 
@@ -182,13 +229,13 @@ class Mafia(Environment):
         mafia_players = self._get_players_by_role(MAFIA, alive_only=False)
         for player, role in self.player_roles.items():
             desc = self.role_descriptions.get(role, "")
-            role_msg = f"Your secret role is: **{role.upper()}**.\nDescription: {desc}"
+            role_msg = f"당신의 비밀 역할은 **{ROLE_NAMES.get(role, role)}**입니다.\n역할 설명: {desc}"
             if role == MAFIA:
                 fellows = [m for m in mafia_players if m != player]
                 if fellows:
-                    role_msg += f"\nYour fellow Mafia member(s): {', '.join(fellows)}."
+                    role_msg += f"\n동료 마피아: {', '.join(fellows)}."
                 else:
-                    role_msg += "\nYou are the sole Mafia member."
+                    role_msg += "\n당신은 유일한 마피아입니다."
             self._moderator_speak(role_msg, visible_to=[player])
 
         # Start Night 1
@@ -203,8 +250,8 @@ class Mafia(Environment):
 
     def _start_night_phase(self):
         self._moderator_speak(
-            f"--- Day {self.day}: Night Falls ---\n"
-            "Night has fallen. All players close their eyes and go to sleep.",
+            f"--- {self.day}일차: 밤 ---\n"
+            "밤이 되었습니다. 모두 눈을 감아주세요.",
             visible_to="all",
         )
         self.night_kills = []
@@ -221,9 +268,9 @@ class Mafia(Environment):
             if not valid_targets:
                 valid_targets = list(self.alive_players)
             prompt = (
-                f"{self._current_actor} (Mafia), choose a living citizen to eliminate tonight.\n"
-                f"Valid living targets: {', '.join(valid_targets)}.\n"
-                "Format: 'I choose to eliminate [Player Name]'."
+                f"{self._current_actor}(마피아), 오늘 밤 제거할 생존 시민을 선택하세요.\n"
+                f"선택 가능한 생존자: {', '.join(valid_targets)}.\n"
+                "한국어로 응답하세요. 형식: '[대상 이름]을 제거하겠습니다.' 대상 이름은 표시된 그대로 쓰세요."
             )
             self._moderator_speak(prompt, visible_to=alive_mafia)
         else:
@@ -238,9 +285,9 @@ class Mafia(Environment):
                 self._action_queue = list(alive_doctors)
                 self._current_actor = self._action_queue.pop(0)
                 prompt = (
-                    f"{self._current_actor} (Doctor), choose a living player to protect tonight.\n"
-                    f"Living players: {', '.join(sorted(self.alive_players))}.\n"
-                    "Format: 'I choose to protect [Player Name]'."
+                    f"{self._current_actor}(의사), 오늘 밤 보호할 생존자를 선택하세요.\n"
+                    f"생존자: {', '.join(sorted(self.alive_players))}.\n"
+                    "한국어로 응답하세요. 형식: '[대상 이름]을 보호하겠습니다.' 대상 이름은 표시된 그대로 쓰세요."
                 )
                 self._moderator_speak(prompt, visible_to=[self._current_actor])
                 return
@@ -253,9 +300,9 @@ class Mafia(Environment):
                 self._current_actor = self._action_queue.pop(0)
                 other_living = [p for p in self.alive_players if p != self._current_actor]
                 prompt = (
-                    f"{self._current_actor} (Police), choose a living player to investigate tonight.\n"
-                    f"Candidate players: {', '.join(sorted(other_living))}.\n"
-                    "Format: 'I choose to investigate [Player Name]'."
+                    f"{self._current_actor}(경찰), 오늘 밤 조사할 생존자를 선택하세요.\n"
+                    f"조사 가능한 생존자: {', '.join(sorted(other_living))}.\n"
+                    "한국어로 응답하세요. 형식: '[대상 이름]을 조사하겠습니다.' 대상 이름은 표시된 그대로 쓰세요."
                 )
                 self._moderator_speak(prompt, visible_to=[self._current_actor])
                 return
@@ -269,27 +316,27 @@ class Mafia(Environment):
         healed_target = self.night_heal
 
         self._moderator_speak(
-            f"--- Day {self.day}: Daybreak ---\n"
-            "The sun rises. The village awakens to find out what happened during the night.",
+            f"--- {self.day}일차: 아침 ---\n"
+            "아침이 되었습니다. 지난밤의 결과를 발표합니다.",
             visible_to="all",
         )
 
         if killed_target and killed_target != healed_target:
             victim = killed_target
             self.alive_players.discard(victim)
-            msg = f"Tragedy struck! **{victim}** was eliminated during the night!"
+            msg = f"지난밤 **{victim}**님이 사망했습니다."
             if self.reveal_role_on_death:
-                victim_role = self.player_roles.get(victim, "unknown").upper()
-                msg += f" {victim} was a **{victim_role}**."
+                victim_role = ROLE_NAMES.get(self.player_roles.get(victim), "알 수 없음")
+                msg += f" {victim}님의 역할은 **{victim_role}**였습니다."
             self._moderator_speak(msg, visible_to="all")
         elif killed_target and killed_target == healed_target:
             self._moderator_speak(
-                f"A miracle occurred! The Doctor successfully protected the victim. Nobody died tonight!",
+                f"의사가 공격 대상을 보호했습니다. 지난밤 사망자는 없습니다!",
                 visible_to="all",
             )
         else:
             self._moderator_speak(
-                "Peaceful night! Nobody was eliminated tonight.", visible_to="all"
+                "평화로운 밤이었습니다. 지난밤 사망자는 없습니다.", visible_to="all"
             )
 
         # Check win condition immediately after night casualty
@@ -300,16 +347,47 @@ class Mafia(Environment):
         alive_list = sorted(list(self.alive_players))
         self.phase = "DAY_DISCUSSION"
         self._action_queue = []
-        for _ in range(self.discussion_rounds):
-            self._action_queue.extend(alive_list)
-
-        self._current_actor = self._action_queue.pop(0)
+        self._current_actor = None
+        self.discussion_messages = 0
+        self.last_speaker = None
+        self.discussion_end_reason = None
         self._moderator_speak(
-            f"Day discussion begins. Living players: {', '.join(alive_list)}.\n"
-            f"Discuss suspicions, share information, and defend yourselves.\n"
-            f"We begin with {self._current_actor}.",
-            visible_to="all",
+            f"낮 토론을 시작합니다. 생존자: {', '.join(alive_list)}.\n"
+            "낮에는 조사·보호·야간 공격을 할 수 없습니다. 플레이어의 주장은 공식 조사 결과가 아닙니다.\n"
+            "의견이 있으면 한국어로 발언하세요. 말하지 않고 듣기만 해도 됩니다.",
         )
+
+    def timestep(self) -> TimeStep:
+        return TimeStep(list(self.get_observation()), self.get_rewards(), self.is_terminal())
+
+    def discussion_speak(self, player_name: str, text: str) -> TimeStep:
+        if (self.is_terminal() or self.phase != "DAY_DISCUSSION"
+                or player_name not in self.alive_players or not text.strip()):
+            raise ValueError("Only living players can speak during discussion")
+        self._current_turn += 1
+        self.version += 1
+        self.discussion_messages += 1
+        self.last_speaker = player_name
+        self.message_pool.append_message(Message(player_name, text.strip(), self._current_turn))
+        return self.timestep()
+
+    def discussion_announce(self, text: str):
+        if self.phase != "DAY_DISCUSSION" or self.is_terminal():
+            raise ValueError("Discussion is not active")
+        self._current_turn += 1
+        self.version += 1
+        self._moderator_speak(text)
+
+    def end_discussion(self, reason: str):
+        if self.phase != "DAY_DISCUSSION" or self.is_terminal():
+            raise ValueError("Discussion is not active")
+        self.discussion_end_reason = reason
+        self.discussion_endings.append({"day": self.day, "reason": reason})
+        self.version += 1
+        self._start_voting_phase()
+
+    def print(self):
+        self.message_pool.print()
 
     def _start_voting_phase(self):
         self.phase = "DAY_VOTING"
@@ -318,10 +396,10 @@ class Mafia(Environment):
         self._action_queue = list(alive_list)
         self._current_actor = self._action_queue.pop(0)
         self._moderator_speak(
-            f"Discussion has ended. It is time for democratic voting.\n"
-            f"Every living player must vote to eliminate one suspect.\n"
-            f"Eligible targets: {', '.join(alive_list)}.\n"
-            f"Starting vote with {self._current_actor}. Format: 'I vote to eliminate [Player Name]'.",
+            f"토론이 끝났습니다. 투표를 시작합니다.\n"
+            f"모든 생존자는 탈락시킬 용의자 한 명에게 투표해야 합니다.\n"
+            f"투표 가능한 대상: {', '.join(alive_list)}.\n"
+            f"{self._current_actor}부터 투표합니다. 한국어로 응답하세요. 형식: '[대상 이름]에게 투표합니다.' 대상 이름은 표시된 그대로 쓰세요.",
             visible_to="all",
         )
 
@@ -334,7 +412,7 @@ class Mafia(Environment):
 
         tally_breakdown = ", ".join(f"{p}: {count}" for p, count in tally.items())
         self._moderator_speak(
-            f"Voting Results: {tally_breakdown}", visible_to="all"
+            f"투표 결과: {tally_breakdown}", visible_to="all"
         )
 
         max_votes = max(tally.values()) if tally else 0
@@ -343,14 +421,14 @@ class Mafia(Environment):
         if max_votes > 0 and len(top_targets) == 1:
             eliminated = top_targets[0]
             self.alive_players.discard(eliminated)
-            msg = f"**{eliminated}** received the most votes ({max_votes}) and has been eliminated."
+            msg = f"**{eliminated}**님이 최다 득표({max_votes}표)로 탈락했습니다."
             if self.reveal_role_on_death:
-                r = self.player_roles.get(eliminated, "unknown").upper()
-                msg += f" {eliminated} was a **{r}**."
+                r = ROLE_NAMES.get(self.player_roles.get(eliminated), "알 수 없음")
+                msg += f" {eliminated}님의 역할은 **{r}**였습니다."
             self._moderator_speak(msg, visible_to="all")
         else:
             self._moderator_speak(
-                "There was a tie in votes or no votes cast. Nobody is eliminated today.",
+                "동률이거나 유효한 투표가 없어 오늘은 아무도 탈락하지 않습니다.",
                 visible_to="all",
             )
 
@@ -361,10 +439,11 @@ class Mafia(Environment):
         self.day += 1
         if self.day > self.max_days:
             self._moderator_speak(
-                f"Maximum days ({self.max_days}) reached. The game ends in a draw!",
+                f"최대 진행 일수({self.max_days}일)에 도달했습니다. 무승부로 게임을 종료합니다!",
                 visible_to="all",
             )
             self._terminal = True
+            self.termination_reason = "max_days"
             return
 
         self._start_night_phase()
@@ -377,20 +456,22 @@ class Mafia(Environment):
 
         if len(alive_mafia) == 0:
             self._moderator_speak(
-                "All Mafia members have been eliminated! **The Citizens win the game!**",
+                "마피아가 모두 탈락했습니다! **시민 팀이 승리했습니다!**",
                 visible_to="all",
             )
             self._terminal = True
+            self.termination_reason = "citizens_win"
             return True
 
         if len(alive_mafia) >= len(alive_citizens):
             mafia_names = ", ".join(self._get_players_by_role(MAFIA, alive_only=False))
             self._moderator_speak(
-                f"Mafia equals or outnumbers citizens ({len(alive_mafia)} vs {len(alive_citizens)})! "
-                f"**The Mafia ({mafia_names}) wins the game!**",
+                f"생존 마피아({len(alive_mafia)}명)가 나머지 생존자({len(alive_citizens)}명) 이상입니다! "
+                f"**마피아 팀({mafia_names})이 승리했습니다!**",
                 visible_to="all",
             )
             self._terminal = True
+            self.termination_reason = "mafia_win"
             return True
 
         return False
@@ -426,10 +507,12 @@ class Mafia(Environment):
             return max(matched, key=lambda c: text_lower.rfind(c.lower()))
 
         # 3. Fallback: random candidate from valid list
-        return random.choice(candidates) if candidates else None
+        return self.rng.choice(sorted(candidates)) if candidates else None
 
     def get_next_player(self) -> str:
         """Returns the player whose turn it is to act."""
+        if self.phase == "DAY_DISCUSSION":
+            raise RuntimeError("Discussion speakers are selected by MafiaDiscussionController")
         if self._current_actor is not None:
             return self._current_actor
         alive = sorted(list(self.alive_players))
@@ -478,10 +561,15 @@ class Mafia(Environment):
         return False
 
     def step(self, player_name: str, action: str) -> TimeStep:
+        if self.is_terminal():
+            raise ValueError("Game has ended")
+        if self.phase == "DAY_DISCUSSION":
+            return self.discussion_speak(player_name, action)
         assert (
             player_name == self.get_next_player()
         ), f"Turn error! Expected {self.get_next_player()}, got {player_name}."
 
+        self.version += 1
         self._current_turn += 1
 
         if self.phase == "NIGHT_MAFIA":
@@ -541,9 +629,9 @@ class Mafia(Environment):
             target = self._parse_target(action, candidates)
             if target:
                 is_mafia = self.player_roles.get(target) == MAFIA
-                verdict = "MAFIA" if is_mafia else "NOT MAFIA"
+                verdict = "마피아" if is_mafia else "마피아가 아님"
                 self._moderator_speak(
-                    f"Investigation report: **{target}** is **{verdict}**.",
+                    f"조사 결과: **{target}** — **{verdict}**.",
                     visible_to=[player_name],
                 )
 
@@ -552,22 +640,6 @@ class Mafia(Environment):
             else:
                 self._current_actor = None
                 self._advance_night_roles()
-
-        elif self.phase == "DAY_DISCUSSION":
-            # Discussion is public to all
-            msg = Message(
-                agent_name=player_name,
-                content=action,
-                turn=self._current_turn,
-                visible_to="all",
-            )
-            self.message_pool.append_message(msg)
-
-            if self._action_queue:
-                self._current_actor = self._action_queue.pop(0)
-            else:
-                self._current_actor = None
-                self._start_voting_phase()
 
         elif self.phase == "DAY_VOTING":
             # Vote is publicly registered

@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import Callable, Dict, List, Optional, Tuple, Union
+from typing import Callable, Dict, List, Optional, Union
 
-from ..backends.base import IntelligenceBackend
 from ..environments.mafia import MAFIA, Mafia
 from ..message import Message
+from ..mafia_discussion import MafiaDiscussionController, DiscussionError
 
 
 @dataclasses.dataclass
@@ -15,6 +15,15 @@ class MafiaTurnRecord:
     prompt: str
     response: str
     action_valid: bool = True
+    kind: str = "game_action"
+    version: int = 0
+    session_id: str = ""
+    score: Optional[int] = None
+    selected: bool = False
+    trainable: bool = True
+    stale: bool = False
+    retry: bool = False
+    error: Optional[str] = None
 
 
 @dataclasses.dataclass
@@ -30,21 +39,25 @@ class MafiaTrajectory:
 @dataclasses.dataclass
 class MafiaEpisodeResult:
     trajectories: Dict[str, MafiaTrajectory]
-    winner: str  # "mafia", "citizens", or "draw"
+    winner: str  # "mafia", "citizens", "draw", or "truncated"
     rewards: Dict[str, float]
     all_messages: List[Message]
     day: int
+    truncated: bool = False
+    termination_reason: str = ""
+    diagnostics: Dict = dataclasses.field(default_factory=dict)
+    discussion_endings: List[Dict] = dataclasses.field(default_factory=list)
 
     def summary(self) -> str:
         """Returns a clean, high-level summary of the game outcome."""
         lines = [
             "================ MAFIA EPISODE RESULT ================",
-            f"Winner: {self.winner.upper()} | Finished on Day: {self.day}",
+            f"Winner: {self.winner.upper()} | Day: {self.day} | Reason: {self.termination_reason}",
             "------------------------------------------------------",
             "Players & Outcomes:",
         ]
         for name, traj in sorted(self.trajectories.items()):
-            status = "WON" if traj.won else "LOST"
+            status = "INCOMPLETE" if self.truncated else ("DRAW" if self.winner == "draw" else ("WON" if traj.won else "LOST"))
             lines.append(
                 f"  - {name} [{traj.role.upper()}]: {status} | "
                 f"Reward: {traj.raw_reward:+.1f} (Shaped: {traj.shaped_reward:+.2f}) | "
@@ -76,7 +89,9 @@ class MafiaEpisodeResult:
                 if traj.turns:
                     lines.append(f"\n--- {name} ({traj.role.upper()}) ---")
                     for t in traj.turns:
-                        lines.append(f"Turn {t.turn} [{t.phase}]:")
+                        lines.append(f"Turn {t.turn} [{t.phase}/{t.kind}] "
+                                     f"score={t.score} selected={t.selected} trainable={t.trainable}:")
+                        lines.append(f"  Prompt: {t.prompt}")
                         lines.append(f"  Response: {t.response}")
             lines.append("====================================================")
 
@@ -121,23 +136,8 @@ def compute_mafia_reward(
     format_bonus: float = 0.1,
     format_penalty: float = 0.2,
 ) -> float:
-    """
-    Computes shaped reward for RL training:
-    - Win/Loss base reward: +1.0 (win) / -1.0 (loss) / 0.0 (draw)
-    - Format adherence bonus/penalty: checks if model responses were non-empty and well-formed
-    """
-    total_reward = base_reward
-
-    # Small shaping: reward format adherence / penalize empty turns
-    for t in turns:
-        if len(t.response.strip()) == 0:
-            total_reward -= format_penalty
-        elif not t.action_valid:
-            total_reward -= format_penalty * 0.5
-        else:
-            total_reward += format_bonus * 0.2
-
-    return total_reward
+    """Compatibility helper: only the team outcome is rewarded, never participation."""
+    return float(base_reward)
 
 
 class MafiaRolloutManager:
@@ -156,10 +156,12 @@ class MafiaRolloutManager:
         dynamic_player_count: bool = False,
         role_mapping: Optional[Dict[str, str]] = None,
         role_counts: Optional[Dict[str, int]] = None,
-        discussion_rounds: int = 1,
+        discussion_rounds: Optional[int] = None,
         max_days: int = 5,
-        max_total_steps: int = 30,
+        max_total_steps: int = 500,
         system_prompts: Optional[Dict[str, str]] = None,
+        moderator_fn=None,
+        **discussion_options,
     ):
         self.dynamic_player_count = dynamic_player_count
         self.min_players = max(3, min_players)
@@ -178,6 +180,8 @@ class MafiaRolloutManager:
         self.max_days = max_days
         self.max_total_steps = max_total_steps
         self.system_prompts = system_prompts or {}
+        self.moderator_fn = moderator_fn
+        self.discussion_options = discussion_options
 
     def get_current_player_names(self) -> List[str]:
         """Returns the list of player names for an episode (dynamically sampled if enabled)."""
@@ -195,6 +199,7 @@ class MafiaRolloutManager:
             role_counts=self.role_counts,
             discussion_rounds=self.discussion_rounds,
             max_days=self.max_days,
+            **self.discussion_options,
         )
 
     def rollout_episode(
@@ -223,43 +228,63 @@ class MafiaRolloutManager:
             role = env.player_roles.get(name, "villager")
             trajectories[name] = MafiaTrajectory(player_name=name, role=role)
 
-        step_count = 0
-        while not env.is_terminal() and step_count < self.max_total_steps:
-            current_player = env.get_next_player()
-            current_phase = env.phase
-            obs_messages = env.get_observation(current_player)
+        def query(request):
+            callback = policy_fn if request.player_name in policy_agents_set else opponent_fn
+            return callback(request.player_name, request.prompt)
 
-            sys_prompt = self.system_prompts.get(
-                current_player,
-                "You are participating in a game of Mafia. Respond clearly and stay in character.",
-            )
-            prompt = format_observation_as_prompt(obs_messages, system_prompt=sys_prompt)
+        moderator_query = None
+        if self.moderator_fn:
+            moderator_query = lambda req: self.moderator_fn(req.player_name, req.prompt)
+        elif env.discussion_moderator:
+            from ..agent import Player
+            from ..config import AgentConfig
+            cfg = dict(env.discussion_moderator)
+            cfg.setdefault("name", "Moderator")
+            cfg.setdefault("role_desc", "Facilitate a fair Mafia discussion.")
+            moderator = Player.from_config(AgentConfig(cfg))
+            moderator_query = lambda req: moderator.act(
+                list(req.observation), Message("System", req.instruction, -1))
 
-            # Query policy or opponent
-            if current_player in policy_agents_set:
-                response = policy_fn(current_player, prompt)
-            else:
-                response = opponent_fn(current_player, prompt)
+        # Callbacks can share a single GPU model. Run them serially; the scheduling
+        # and observation semantics are identical to the parallel Arena adapter.
+        controller = MafiaDiscussionController(
+            env, query, moderator_query=moderator_query,
+            system_prompts=self.system_prompts, parallel=False,
+        )
+        reason = "step_limit"
+        try:
+            for _ in range(self.max_total_steps):
+                if env.is_terminal():
+                    break
+                controller.advance()
+            if env.is_terminal():
+                reason = env.termination_reason or "game_end"
+        except DiscussionError as exc:
+            reason = "model_error: " + str(exc)
+        finally:
+            controller.close()
 
-            # Record turn in trajectory
-            record = MafiaTurnRecord(
-                turn=step_count,
-                phase=current_phase,
-                prompt=prompt,
-                response=response,
-                action_valid=len(response.strip()) > 0,
-            )
-            trajectories[current_player].turns.append(record)
-
-            env.step(current_player, response)
-            step_count += 1
+        truncated = not env.is_terminal()
+        for i, record in enumerate(controller.records):
+            req = record.request
+            if req.player_name not in trajectories:  # Moderator is not a policy player.
+                continue
+            trajectories[req.player_name].turns.append(MafiaTurnRecord(
+                turn=i, phase=req.phase, prompt=req.prompt, response=record.response,
+                action_valid=record.valid, kind=req.kind, version=req.version,
+                session_id=req.session_id, score=record.score, selected=record.selected,
+                trainable=record.trainable and not truncated, stale=record.stale,
+                retry=req.retry, error=record.error,
+            ))
 
         raw_rewards = env.get_rewards()
 
         # Determine winner
         alive_mafia = env._get_players_by_role(MAFIA, alive_only=True)
         alive_citizens = [p for p in env.alive_players if env.player_roles[p] != MAFIA]
-        if len(alive_mafia) == 0:
+        if truncated:
+            winner = "truncated"
+        elif len(alive_mafia) == 0:
             winner = "citizens"
         elif len(alive_mafia) >= len(alive_citizens):
             winner = "mafia"
@@ -287,5 +312,9 @@ class MafiaRolloutManager:
             rewards=raw_rewards,
             all_messages=env.get_observation(None),
             day=env.day,
+            truncated=truncated,
+            termination_reason=reason,
+            diagnostics=controller.diagnostics(),
+            discussion_endings=list(env.discussion_endings),
         )
 

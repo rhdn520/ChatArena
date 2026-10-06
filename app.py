@@ -1,18 +1,17 @@
 from dotenv import load_dotenv
 load_dotenv()
 import json
+import copy
 import re
 from glob import glob
 
 import gradio as gr
 
-from chatarena.arena import Arena, TooManyInvalidActions
+from chatarena.arena import Arena
+from chatarena.ui.mafia_session import sessions
 from chatarena.backends import BACKEND_REGISTRY
-from chatarena.backends.human import HumanBackendError
 from chatarena.config import ArenaConfig
-from chatarena.database import SupabaseDB, log_arena, log_messages, supabase_available
 from chatarena.environments import ENV_REGISTRY
-from chatarena.message import Message
 
 css = """#col-container {max-width: 90%; margin-left: auto; margin-right: auto; display: flex; flex-direction: column;}
 #header {text-align: center;}
@@ -54,8 +53,6 @@ def load_examples():
 
 
 EXAMPLE_REGISTRY = load_examples()
-
-DB = SupabaseDB() if supabase_available else None
 
 
 def get_moderator_components(visible=True):
@@ -167,7 +164,7 @@ def get_player_components(name, visible):
 
 
 def get_empty_state():
-    return gr.State({"arena": None})
+    return gr.State({"session_id": None})
 
 
 with gr.Blocks(css=css) as demo:
@@ -291,7 +288,15 @@ Prompting multiple AI agents to play games in a language-driven environment.
                 )
                 with gr.Row():
                     btn_step = gr.Button("Start")
+                    btn_pause = gr.Button("Pause")
+                    btn_send = gr.Button("Send")
                     btn_restart = gr.Button("Clear")
+                live_status = gr.Markdown("Select an example, then Start. Mafia runs automatically.")
+                mafia_moderator_enabled = gr.Checkbox(label="Use LLM discussion moderator (Mafia)", value=False)
+                mafia_options = gr.Textbox(label="Mafia discussion settings (JSON)",
+                    value='{"max_discussion_messages": 24, "max_intent_rounds": 48, "discussion_seconds": 180, "silence_seconds": 10}',
+                    lines=3)
+                all_components += [mafia_moderator_enabled, mafia_options]
 
                 all_components += [human_input_textbox, btn_step, btn_restart]
 
@@ -321,7 +326,8 @@ Prompting multiple AI agents to play games in a language-driven environment.
         env_desc = all_comps[env_desc_textbox]
 
         # Initialize the players
-        num_players = all_comps[num_player_slider]
+        num_players = int(all_comps[num_player_slider])
+        selected_example = EXAMPLE_REGISTRY.get(all_comps.get(example_selector), {})
         player_configs = []
         for i in range(num_players):
             role_name, role_desc, backend_type, temperature, max_tokens = (
@@ -339,6 +345,12 @@ Prompting multiple AI agents to play games in a language-driven environment.
                     "max_tokens": max_tokens,
                 },
             }
+            # Preserve model names and backend-specific options from examples.
+            example_players = selected_example.get("players", [])
+            if i < len(example_players):
+                backend_config = copy.deepcopy(example_players[i].get("backend", {}))
+                backend_config.update(player_config["backend"])
+                player_config["backend"] = backend_config
             player_configs.append(player_config)
 
         # Initialize the environment
@@ -373,136 +385,101 @@ Prompting multiple AI agents to play games in a language-driven environment.
             "moderator_period": None,
         }
 
-        # arena_config = {"players": player_configs, "environment": env_config}
-        arena_config = ArenaConfig(players=player_configs, environment=env_config)
-        return arena_config
-
-    def step_game(all_comps: dict):
-        yield {
-            btn_step: gr.update(value="Running...", interactive=False),
-            btn_restart: gr.update(interactive=False),
-        }
-
-        cur_state = all_comps[state]
-
-        # If arena is not yet created, create it
-        if cur_state["arena"] is None:
-            # Create the Arena
-            arena_config = _create_arena_config_from_components(all_comps)
-            arena = Arena.from_config(arena_config)
-            log_arena(arena, database=DB)
-            cur_state["arena"] = arena
-        else:
-            arena = cur_state["arena"]
-
-        try:
-            timestep = arena.step()
-        except HumanBackendError as e:
-            # Handle human input and recover with the game update
-            human_input = all_comps[human_input_textbox]
-            if human_input == "":
-                timestep = None  # Failed to get human input
-            else:
-                timestep = arena.environment.step(e.agent_name, human_input)
-        except TooManyInvalidActions:
-            timestep = arena.current_timestep
-            timestep.observation.append(
-                Message(
-                    "System",
-                    "Too many invalid actions. Game over.",
-                    turn=-1,
-                    visible_to="all",
-                )
+        if env_type == "mafia":
+            env_config = copy.deepcopy(selected_example.get("environment", {}))
+            env_config["env_type"] = "mafia"
+            env_config.pop("discussion_rounds", None)
+            env_config.pop("moderator", None)
+            options = json.loads(all_comps[mafia_options] or "{}")
+            allowed = {"max_discussion_messages", "max_intent_rounds", "discussion_seconds",
+                       "silence_seconds", "intent_weights", "repeat_speaker_factor", "seed"}
+            if not isinstance(options, dict) or set(options) - allowed:
+                raise ValueError("Unknown Mafia discussion setting")
+            env_config.update(options)
+            saved_moderator = env_config.get("discussion_moderator") or {}
+            saved_backend = saved_moderator.get("backend", {})
+            if saved_backend.get("backend_type") == moderator_backend_type:
+                merged_backend = copy.deepcopy(saved_backend)
+                merged_backend.update(moderator_config["backend"])
+                moderator_config["backend"] = merged_backend
+            env_config["discussion_moderator"] = (
+                moderator_config if all_comps[mafia_moderator_enabled] else None
             )
-            timestep.terminal = True
+        return ArenaConfig(players=player_configs, environment=env_config, global_prompt=env_desc)
 
-        if timestep is None:
-            yield {
-                human_input_textbox: gr.update(
-                    value="", placeholder="Please enter a valid input"
-                ),
-                btn_step: gr.update(value="Next Step", interactive=True),
-                btn_restart: gr.update(interactive=True),
-            }
-        else:
-            all_messages = timestep.observation  # user sees what the moderator sees
-            log_messages(arena, all_messages, database=DB)
-
-            chatbot_output = _convert_to_chatbot_output(all_messages, display_recv=True)
-            update_dict = {
-                human_input_textbox: gr.update(value=""),
-                chatbot: chatbot_output,
-                btn_step: gr.update(
-                    value="Next Step", interactive=not timestep.terminal
-                ),
-                btn_restart: gr.update(interactive=True),
-                state: cur_state,
-            }
-            # Get the visible messages for each player
-            for i, player in enumerate(arena.players):
-                player_messages = arena.environment.get_observation(player.name)
-                player_output = _convert_to_chatbot_output(player_messages)
-                # Update the player's chatbot output
-                update_dict[player_chatbots[i]] = player_output
-
-            if DEBUG:
-                arena.environment.print()
-
-            yield update_dict
-
-    def restart_game(all_comps: dict):
-        cur_state = all_comps[state]
-        cur_state["arena"] = None
-        yield {
-            chatbot: [],
-            btn_restart: gr.update(interactive=False),
-            btn_step: gr.update(interactive=False),
-            state: cur_state,
+    def render_session(session):
+        snap = session.snapshot()
+        label = f"Playing as {snap['human']}" if snap["human"] else "Spectator"
+        result = {
+            chatbot: _convert_to_chatbot_output(snap["messages"], display_recv=not snap["human"]),
+            live_status: f"{label} · {snap['status']}" + (f" — {snap['error']}" if snap["error"] else ""),
+            btn_step: gr.update(
+                value=("Running" if snap["status"] in ("running", "waiting_human", "waiting_capacity")
+                       else "Resume") if session.controller else "Next Step",
+                interactive=not snap["terminal"] and (not session.controller or snap["status"] in ("paused", "error"))),
         }
+        for i, player in enumerate(session.arena.players):
+            if i < len(player_chatbots):
+                result[player_chatbots[i]] = _convert_to_chatbot_output(snap["views"].get(player.name, []))
+        return result
 
-        arena_config = _create_arena_config_from_components(all_comps)
-        arena = Arena.from_config(arena_config)
-        log_arena(arena, database=DB)
-        cur_state["arena"] = arena
+    def step_game(all_comps):
+        current = all_comps[state]
+        session = sessions.get(current.get("session_id"))
+        if session is None:
+            arena = Arena.from_config(_create_arena_config_from_components(all_comps))
+            key = sessions.add(arena)
+            current = {"session_id": key}
+            session = sessions.get(key)
+        session.start()
+        result = render_session(session)
+        result[state] = current
+        return result
 
-        yield {
-            btn_step: gr.update(value="Start", interactive=True),
-            btn_restart: gr.update(interactive=True),
-            state: cur_state,
-        }
+    def refresh_game(current):
+        session = sessions.get(current.get("session_id"))
+        return render_session(session) if session else {comp: gr.skip() for comp in live_outputs}
+
+    def pause_game(current):
+        session = sessions.get(current.get("session_id"))
+        if session:
+            session.pause()
+            return render_session(session)
+        return {comp: gr.skip() for comp in live_outputs}
+
+    def send_message(current, text):
+        session = sessions.get(current.get("session_id"))
+        if session is None:
+            return {live_status: "Start the game first."}
+        try:
+            session.submit(text)
+        except ValueError as exc:
+            return {live_status: str(exc)}
+        # The polling callback owns chat rendering, avoiding old send snapshots.
+        return {human_input_textbox: ""}
+
+    def restart_game(current):
+        sessions.remove(current.get("session_id"))
+        return {state: {"session_id": None}, chatbot: [],
+                **{comp: [] for comp in player_chatbots},
+                btn_step: gr.update(value="Start", interactive=True),
+                live_status: "Cleared. Start creates a new game."}
 
     # Remove Accordion and Tab from the list of components
     all_components = [
         comp for comp in all_components if not isinstance(comp, (gr.Accordion, gr.Tab))
     ]
 
-    # If any of the Textbox, Slider, Checkbox, Dropdown, RadioButtons is changed, the Step button is disabled
-    for comp in all_components:
-
-        def _disable_step_button(state):
-            if state["arena"] is not None:
-                return gr.update(interactive=False)
-            else:
-                return gr.update()
-
-        if (
-            isinstance(
-                comp, (gr.Textbox, gr.Slider, gr.Checkbox, gr.Dropdown, gr.Radio)
-            )
-            and comp is not human_input_textbox
-        ):
-            comp.change(_disable_step_button, state, btn_step)
-
-    btn_step.click(
-        step_game,
-        set(all_components + [state]),
-        [chatbot, *player_chatbots, btn_step, btn_restart, state, human_input_textbox],
-    )
-    btn_restart.click(
-        restart_game,
-        set(all_components + [state]),
-        [chatbot, *player_chatbots, btn_step, btn_restart, state, human_input_textbox],
-    )
+    live_outputs = [chatbot, *player_chatbots, live_status, btn_step]
+    btn_step.click(step_game, set(all_components + [state]), live_outputs + [state])
+    btn_pause.click(pause_game, state, live_outputs, queue=False)
+    btn_restart.click(restart_game, state, live_outputs + [state], queue=False)
+    btn_send.click(send_message, [state, human_input_textbox],
+                   [human_input_textbox, live_status], queue=False)
+    human_input_textbox.submit(send_message, [state, human_input_textbox],
+                               [human_input_textbox, live_status], queue=False)
+    poll_timer = gr.Timer(0.5)
+    poll_timer.tick(refresh_game, state, live_outputs, queue=False)
 
     # If an example is selected, update the components
     def update_components_from_example(all_comps: dict):
@@ -514,10 +491,15 @@ Prompting multiple AI agents to play games in a language-driven environment.
         env_config = example_config["environment"]
         update_dict[env_desc_textbox] = gr.update(value=example_config["global_prompt"])
         update_dict[env_selector] = gr.update(value=env_config["env_type"])
-        update_dict[parallel_checkbox] = gr.update(value=env_config["parallel"])
+        update_dict[parallel_checkbox] = gr.update(value=env_config.get("parallel", False))
+        option_names = ("max_discussion_messages", "max_intent_rounds", "discussion_seconds",
+                        "silence_seconds", "intent_weights", "repeat_speaker_factor", "seed")
+        update_dict[mafia_options] = json.dumps({k: env_config[k] for k in option_names if k in env_config})
+        update_dict[mafia_moderator_enabled] = bool(env_config.get("discussion_moderator"))
 
         # Update the moderator components
-        if "moderator" in env_config:
+        if "moderator" in env_config or env_config.get("discussion_moderator"):
+            env_config = dict(env_config, moderator=env_config.get("discussion_moderator") or env_config["moderator"])
             (
                 mod_role_desc,
                 mod_terminal_condition,
@@ -533,16 +515,16 @@ Prompting multiple AI agents to play games in a language-driven environment.
                 value=env_config["moderator"]["role_desc"]
             )
             update_dict[mod_terminal_condition] = gr.update(
-                value=env_config["moderator"]["terminal_condition"]
+                value=env_config["moderator"].get("terminal_condition", "")
             )
             update_dict[moderator_backend_type] = gr.update(
                 value=env_config["moderator"]["backend"]["backend_type"]
             )
             update_dict[mod_temp] = gr.update(
-                value=env_config["moderator"]["backend"]["temperature"]
+                value=env_config["moderator"]["backend"].get("temperature", 0.3)
             )
             update_dict[mod_max_tokens] = gr.update(
-                value=env_config["moderator"]["backend"]["max_tokens"]
+                value=env_config["moderator"]["backend"].get("max_tokens", 100)
             )
 
         # Update the player components
@@ -577,4 +559,3 @@ Prompting multiple AI agents to play games in a language-driven environment.
 if __name__ == "__main__":
     demo.queue()
     demo.launch(debug=DEBUG, server_port=8080)
-

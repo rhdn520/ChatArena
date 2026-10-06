@@ -23,7 +23,6 @@ class TestMafiaEnvironment(unittest.TestCase):
         env = Mafia(
             player_names=self.player_names,
             role_mapping=self.role_mapping,
-            discussion_rounds=1,
             max_days=3,
         )
         self.assertEqual(env.player_roles["Player 1"], MAFIA)
@@ -37,9 +36,9 @@ class TestMafiaEnvironment(unittest.TestCase):
         obs_p4 = env.get_observation("Player 4")
 
         # Player 1 should see secret role as MAFIA
-        self.assertTrue(any("MAFIA" in m.content for m in obs_p1))
+        self.assertTrue(any("당신의 비밀 역할은 **마피아**" in m.content for m in obs_p1))
         # Player 4 (Villager) should NOT see who the MAFIA is
-        self.assertFalse(any("Player 1 is MAFIA" in m.content for m in obs_p4))
+        self.assertFalse(any("당신의 비밀 역할은 **마피아**" in m.content for m in obs_p4))
 
     def test_load_environment_from_config(self):
         config = {
@@ -51,11 +50,30 @@ class TestMafiaEnvironment(unittest.TestCase):
         self.assertIsInstance(env, Mafia)
         self.assertEqual(env.player_roles, self.role_mapping)
 
+    def test_korean_actions_and_private_reports_through_victory(self):
+        env = Mafia(self.player_names, role_mapping=self.role_mapping)
+        env.step("Player 1", "Player 4를 제거하겠습니다.")
+        self.assertEqual(env.night_kills, ["Player 4"])
+        env.step("Player 2", "Player 4를 보호하겠습니다.")
+        self.assertEqual(env.night_heal, "Player 4")
+        env.step("Player 3", "Player 1을 조사하겠습니다.")
+        report = "조사 결과: **Player 1** — **마피아**."
+        self.assertTrue(any(m.content == report for m in env.get_observation("Player 3")))
+        self.assertFalse(any(m.content == report for m in env.get_observation("Player 4")))
+        self.assertEqual(len(env.alive_players), 4)
+        env.discussion_speak("Player 3", "Player 1이 마피아라고 생각합니다.")
+        env.end_discussion("test")
+        for _ in range(4):
+            env.step(env.get_next_player(), "Player 1에게 투표합니다.")
+        self.assertEqual(env.termination_reason, "citizens_win")
+        self.assertIn("시민 팀이 승리했습니다", env.get_observation()[-1].content)
+        self.assertTrue(all(any("가" <= ch <= "힣" for ch in m.content)
+                            for m in env.get_observation() if m.agent_name == "Moderator"))
+
     def test_game_flow_full_cycle(self):
         env = Mafia(
             player_names=self.player_names,
             role_mapping=self.role_mapping,
-            discussion_rounds=1,
             max_days=3,
         )
 
@@ -81,28 +99,18 @@ class TestMafiaEnvironment(unittest.TestCase):
         # Police should have received investigation report
         police_obs = env.get_observation("Player 3")
         self.assertTrue(
-            any("Player 1" in m.content and "MAFIA" in m.content for m in police_obs)
+            any("조사 결과: **Player 1** — **마피아**" in m.content for m in police_obs)
         )
 
         # 4. Daybreak: Player 4 was eliminated
         self.assertNotIn("Player 4", env.alive_players)
         self.assertEqual(env.phase, "DAY_DISCUSSION")
 
-        # 5. Day Discussion: Living players are Player 1, Player 2, Player 3
-        current = env.get_next_player()
-        self.assertIn(current, env.alive_players)
-        ts = env.step(current, f"I am {current} and I suspect Player 1.")
-        self.assertFalse(ts.terminal)
-
-        current2 = env.get_next_player()
-        self.assertIn(current2, env.alive_players)
-        ts = env.step(current2, f"I agree, let's look at the clues.")
-        self.assertFalse(ts.terminal)
-
-        current3 = env.get_next_player()
-        self.assertIn(current3, env.alive_players)
-        ts = env.step(current3, "I am innocent!")
-        self.assertFalse(ts.terminal)
+        # Free discussion has no fixed speaker order; the controller ends it.
+        env.step("Player 3", "I investigated Player 1.")
+        env.step("Player 2", "Then I suspect Player 1.")
+        self.assertEqual(env.phase, "DAY_DISCUSSION")
+        env.end_discussion("test")
 
         # 6. Voting Phase
         self.assertEqual(env.phase, "DAY_VOTING")
@@ -128,7 +136,6 @@ class TestMafiaEnvironment(unittest.TestCase):
         env = Mafia(
             player_names=self.player_names,
             role_mapping=self.role_mapping,
-            discussion_rounds=1,
             max_days=3,
         )
 
@@ -153,7 +160,6 @@ class TestMafiaEnvironment(unittest.TestCase):
         env = Mafia(
             player_names=["Player 1", "Player 2", "Player 3"],
             role_mapping=role_map,
-            discussion_rounds=1,
             max_days=3,
         )
 
@@ -185,13 +191,15 @@ class TestMafiaEnvironment(unittest.TestCase):
         )
 
         def mock_policy(player, prompt):
-            if "Mafia" in prompt:
+            if "REQUEST intent:" in prompt:
+                return "0"
+            if "NIGHT_MAFIA입니다" in prompt:
                 return "I choose to eliminate Player 4"
-            elif "Doctor" in prompt:
+            elif "NIGHT_DOCTOR입니다" in prompt:
                 return "I choose to protect Player 2"
-            elif "Police" in prompt:
+            elif "NIGHT_POLICE입니다" in prompt:
                 return "I choose to investigate Player 1"
-            elif "vote" in prompt.lower():
+            elif "DAY_VOTING입니다" in prompt:
                 return "I vote to eliminate Player 1"
             return "I suspect Player 1"
 

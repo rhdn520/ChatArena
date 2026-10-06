@@ -2,6 +2,7 @@ import csv
 import json
 import logging
 import uuid
+import threading
 from typing import Dict, List, Union
 
 from .agent import Player
@@ -28,6 +29,51 @@ class Arena:
         self.current_timestep = environment.reset()
         self.uuid = uuid.uuid4()  # Generate a unique id for the game
         self.invalid_actions_retry = 5
+        self.discussion = None
+        if environment.type_name == "mafia":
+            from .mafia_discussion import MafiaDiscussionController
+            from .message import Message
+            from .config import AgentConfig
+            # A backend instance is never entered concurrently. Local transformer
+            # backends also share one gate, even when represented by distinct players.
+            locks = {}
+            backend_sessions = {}
+            local_lock = threading.Lock()
+            def gate(backend):
+                if backend.type_name.startswith("transformers"):
+                    return local_lock
+                return locks.setdefault(id(backend), threading.Lock())
+            for player in players:
+                gate(player.backend)
+
+            def query(request):
+                player = self.name_to_player[request.player_name]
+                with gate(player.backend):
+                    if backend_sessions.get(id(player.backend)) != request.session_id:
+                        player.reset()
+                        backend_sessions[id(player.backend)] = request.session_id
+                    return player.act(list(request.observation),
+                                      Message("System", request.instruction, -1))
+
+            moderator_query = None
+            if environment.discussion_moderator:
+                config = dict(environment.discussion_moderator)
+                config.setdefault("name", "Moderator")
+                config.setdefault("role_desc", "Facilitate a fair Mafia discussion.")
+                moderator = Player.from_config(AgentConfig(config))
+                gate(moderator.backend)
+                def moderator_query(request):
+                    with gate(moderator.backend):
+                        if backend_sessions.get(id(moderator.backend)) != request.session_id:
+                            moderator.reset()
+                            backend_sessions[id(moderator.backend)] = request.session_id
+                        return moderator.act(list(request.observation),
+                                             Message("System", request.instruction, -1))
+            self.discussion = MafiaDiscussionController(
+                environment, query,
+                human_names=[p.name for p in players if isinstance(p.backend, Human)],
+                moderator_query=moderator_query,
+            )
 
     @property
     def num_players(self):
@@ -39,16 +85,28 @@ class Arena:
 
     def reset(self) -> TimeStep:
         # Reset the environment
-        self.current_timestep = self.environment.reset()
+        if self.discussion is not None:
+            self.discussion.reset()
+            self.current_timestep = self.environment.timestep()
+        else:
+            self.current_timestep = self.environment.reset()
         # Reset the players
-        for player in self.players:
-            player.reset()
+        if self.discussion is None:
+            for player in self.players:
+                player.reset()
         # Reset the uuid
         self.uuid = uuid.uuid4()
         return self.current_timestep
 
     def step(self) -> TimeStep:
         """Take a step in the game: one player takes an action and the environment updates."""
+        if self.discussion is not None:
+            if (self.environment.phase != "DAY_DISCUSSION" and not self.environment.is_terminal()
+                    and self.environment.get_next_player() in self.discussion.human_names):
+                from .backends.human import HumanBackendError
+                raise HumanBackendError(self.environment.get_next_player())
+            self.current_timestep = self.discussion.advance()
+            return self.current_timestep
         player_name = self.environment.get_next_player()
         player = self.name_to_player[player_name]  # get the player object
         observation = self.environment.get_observation(
@@ -76,10 +134,17 @@ class Arena:
             logging.warning(warning_msg)
             raise TooManyInvalidActions(warning_msg)
 
+        self.current_timestep = timestep
         return timestep
+
+    def close(self):
+        if self.discussion is not None:
+            self.discussion.close()
 
     def next_is_human(self):
         """Check if the next player is human."""
+        if self.discussion is not None and self.environment.phase == "DAY_DISCUSSION":
+            return False
         player_name = self.environment.get_next_player()
         player = self.name_to_player[player_name]
         return isinstance(player.backend, Human)
