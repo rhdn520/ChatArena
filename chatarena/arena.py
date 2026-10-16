@@ -29,6 +29,7 @@ class Arena:
         self.current_timestep = environment.reset()
         self.uuid = uuid.uuid4()  # Generate a unique id for the game
         self.invalid_actions_retry = 5
+        self.action_rejections = []
         self.discussion = None
         if environment.type_name == "mafia":
             from .mafia_discussion import MafiaDiscussionController
@@ -87,6 +88,7 @@ class Arena:
 
     def reset(self) -> TimeStep:
         # Reset the environment
+        self.action_rejections.clear()
         if self.discussion is not None:
             self.discussion.reset()
             self.current_timestep = self.environment.timestep()
@@ -116,16 +118,32 @@ class Arena:
         )  # get the observation for the player
 
         timestep = None
+        context_provider = getattr(self.environment, "get_agent_context", None)
+        context = context_provider(player_name) if context_provider else ""
         for i in range(
             self.invalid_actions_retry
         ):  # try to take an action for a few times
-            action = player(observation)  # take an action
+            if context:
+                from .message import Message
+                instruction = context
+                if i:
+                    instruction += "\nThe previous response was rejected. Follow the current phase's output rules; do not repeat the rejected response."
+                action = player.act(observation, Message("System", instruction, -1),
+                                    game_context=context)
+            else:
+                action = player(observation)
             if self.environment.check_action(action, player_name):  # action is valid
                 timestep = self.environment.step(
                     player_name, action
                 )  # update the environment
                 break
             else:  # action is invalid
+                self.action_rejections.append({
+                    "player": player_name,
+                    "phase": getattr(self.environment, "phase", None),
+                    "response": action,
+                    "reason": "Environment rejected action; not committed to conversation",
+                })
                 logging.warning(f"{player_name} made an invalid action {action}")
                 continue
 

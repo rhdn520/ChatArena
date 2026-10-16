@@ -1,0 +1,62 @@
+{
+  "name": "Liar Game Qwen3.5-9B Pilot",
+  "global_prompt": "You are playing Liar Game with exactly one Liar. The Moderator privately assigns roles. Non-liars receive the same secret word; the Liar does not. The topic is known only if publicly announced. Each round follows the announced fixed player order. Everyone hears all earlier public clues before speaking. There are no question-and-answer turns. After the announced clue rounds, everyone casts one private vote for another player. If the group accuses a non-liar, the Liar wins. If it accuses the Liar, the Liar has one final word guess: a correct guess wins for the Liar; otherwise the non-liars win. Winners receive 1.0 and losers 0.0. Non-liars must identify the Liar AND keep the word difficult to infer. As a non-liar, speak to others who already know the word. Use one understated, truthful association with an everyday situation, reaction, habit, or preference. Do not teach an outsider its characteristic function, parts, materials, geography, characters, or memorable quotes. Leave several words plausible, especially when earlier clues already narrow the answer. Keep a real connection to the word; empty statements that fit anything do not help. Style examples using unrelated words: for Receipt, 'A printed record of a purchase' is too direct; 'I sometimes wish I had kept it' is understated. For Rehearsal, 'Practice before a performance' is too direct; 'The mistakes are less embarrassing here' is understated. These demonstrate style only: do not reuse their words or sentences as your clue. The Liar should infer the word from public clues and blend in without copying verbatim. During voting, indirectness alone does not identify the Liar, and accurate details do not prove private knowledge: later speakers may have learned from earlier clues. Judge the sequence and the information available before each turn. On a clue turn output one short clue without naming the word. On a vote turn output only I vote for NAME, replacing NAME with one other player's exact name. Malformed or self-votes abstain; ties accuse the earliest tied player in the configured order. On a final guess turn output only the guessed word. Do not add brackets, speaker names, channel labels or explanations. Never speak for another player or reveal a private role message.",
+  "environment": {
+    "env_type": "liar_game",
+    "clue_rounds": 2,
+    "reveal_topic": true,
+    "parallel": false
+  },
+  "players": [
+    {
+      "name": "Player 1",
+      "role_desc": "You are Player 1. Follow the current phase instruction and output only the requested clue, vote or final word.",
+      "backend": {
+        "backend_type": "openai-chat",
+        "model": "Qwen/Qwen3.5-9B",
+        "temperature": 0.6,
+        "max_tokens": 512
+      }
+    },
+    {
+      "name": "Player 2",
+      "role_desc": "You are Player 2. Follow the current phase instruction and output only the requested clue, vote or final word.",
+      "backend": {
+        "backend_type": "openai-chat",
+        "model": "Qwen/Qwen3.5-9B",
+        "temperature": 0.6,
+        "max_tokens": 512
+      }
+    },
+    {
+      "name": "Player 3",
+      "role_desc": "You are Player 3. Follow the current phase instruction and output only the requested clue, vote or final word.",
+      "backend": {
+        "backend_type": "openai-chat",
+        "model": "Qwen/Qwen3.5-9B",
+        "temperature": 0.6,
+        "max_tokens": 512
+      }
+    },
+    {
+      "name": "Player 4",
+      "role_desc": "You are Player 4. Follow the current phase instruction and output only the requested clue, vote or final word.",
+      "backend": {
+        "backend_type": "openai-chat",
+        "model": "Qwen/Qwen3.5-9B",
+        "temperature": 0.6,
+        "max_tokens": 512
+      }
+    },
+    {
+      "name": "Player 5",
+      "role_desc": "You are Player 5. Follow the current phase instruction and output only the requested clue, vote or final word.",
+      "backend": {
+        "backend_type": "openai-chat",
+        "model": "Qwen/Qwen3.5-9B",
+        "temperature": 0.6,
+        "max_tokens": 512
+      }
+    }
+  ]
+}
