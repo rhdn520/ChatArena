@@ -53,7 +53,8 @@ class Arena:
                         player.reset()
                         backend_sessions[id(player.backend)] = request.session_id
                     return player.act(list(request.observation),
-                                      Message("System", request.instruction, -1))
+                                      Message("System", request.instruction, -1),
+                                      game_context=request.game_context)
 
             moderator_query = None
             if environment.discussion_moderator:
@@ -68,7 +69,8 @@ class Arena:
                             moderator.reset()
                             backend_sessions[id(moderator.backend)] = request.session_id
                         return moderator.act(list(request.observation),
-                                             Message("System", request.instruction, -1))
+                                             Message("System", request.instruction, -1),
+                                             game_context=request.game_context)
             self.discussion = MafiaDiscussionController(
                 environment, query,
                 human_names=[p.name for p in players if isinstance(p.backend, Human)],

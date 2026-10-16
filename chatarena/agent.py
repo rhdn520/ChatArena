@@ -97,7 +97,8 @@ class Player(Agent):
             global_prompt=self.global_prompt,
         )
 
-    def act(self, observation: List[Message], request_msg: Message = None) -> str:
+    def act(self, observation: List[Message], request_msg: Message = None,
+            game_context: str = "") -> str:
         """
         Take an action based on the observation (Generate a response), which can later be parsed to actual actions that affect the game dynamics.
 
@@ -110,7 +111,7 @@ class Player(Agent):
         try:
             response = self.backend.query(
                 agent_name=self.name,
-                role_desc=self.role_desc,
+                role_desc=self.role_desc + ("\n\n" + game_context if game_context else ""),
                 history_messages=observation,
                 global_prompt=self.global_prompt,
                 request_msg=request_msg,

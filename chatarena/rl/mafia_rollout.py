@@ -243,7 +243,8 @@ class MafiaRolloutManager:
             cfg.setdefault("role_desc", "Facilitate a fair Mafia discussion.")
             moderator = Player.from_config(AgentConfig(cfg))
             moderator_query = lambda req: moderator.act(
-                list(req.observation), Message("System", req.instruction, -1))
+                list(req.observation), Message("System", req.instruction, -1),
+                game_context=req.game_context)
 
         # Callbacks can share a single GPU model. Run them serially; the scheduling
         # and observation semantics are identical to the parallel Arena adapter.
@@ -317,4 +318,3 @@ class MafiaRolloutManager:
             diagnostics=controller.diagnostics(),
             discussion_endings=list(env.discussion_endings),
         )
-

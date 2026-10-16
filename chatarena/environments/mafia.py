@@ -21,7 +21,7 @@ ROLE_NAMES = {MAFIA: "마피아", DOCTOR: "의사", POLICE: "경찰", VILLAGER: 
 
 DEFAULT_ROLE_DESCRIPTIONS = {
     MAFIA: "밤에는 시민을 제거하고, 낮에는 정체를 숨기며 시민 사이에 섞여 행동하세요.",
-    DOCTOR: "매일 밤 한 명을 선택해 마피아의 공격으로부터 보호하세요.",
+    DOCTOR: "매일 밤 한 명을 선택해 마피아의 공격으로부터 보호하세요. 자신도 보호할 수 있습니다. 보호는 정체 조사와 다르며, 보호한 사람의 생존만으로 시민 여부나 공격 여부를 알 수는 없습니다.",
     POLICE: "밤의 경찰 차례에 한 명을 조사해 마피아인지 확인하세요. 낮에는 새 조사를 할 수 없으며, 지난밤 결과를 공개할지는 스스로 결정하세요.",
     VILLAGER: "낮에 다른 참가자와 단서를 토론하고, 마피아로 의심되는 사람에게 투표하세요.",
 }
@@ -192,12 +192,14 @@ class Mafia(Environment):
             if r == role and (not alive_only or name in self.alive_players)
         ]
 
-    def _moderator_speak(self, text: str, visible_to: Union[str, List[str]] = "all"):
+    def _moderator_speak(self, text: str, visible_to: Union[str, List[str]] = "all",
+                         msg_type: str = "text"):
         message = Message(
             agent_name="Moderator",
             content=text,
             turn=self._current_turn,
             visible_to=visible_to,
+            msg_type=msg_type,
         )
         self.message_pool.append_message(message)
 
@@ -239,7 +241,13 @@ class Mafia(Environment):
             "게임 규칙:\n"
             "- 밤과 낮이 번갈아 진행됩니다.\n"
             "- 밤에는 마피아가 제거할 대상을 선택하고, 의사는 보호, 경찰은 조사를 수행합니다.\n"
+            "- 다른 참가자의 야간 이동을 관찰하는 기능은 없습니다. 밤의 정보는 본인에게 전달된 비공개 기록과 아침의 공개 결과로 확인합니다. 마피아끼리는 전용 의논과 공격 선택을 공유합니다.\n"
             "- 낮에는 단서를 토론한 뒤 마피아로 의심되는 사람에게 투표해 탈락시킵니다.\n"
+            "- 누구나 자신의 역할을 밝히거나 다른 역할이라고 주장할 수 있습니다. 역할 공개 자체는 규칙 위반도 거짓의 증거도 아닙니다.\n"
+            "- 경찰은 밤에 사회자로부터 실제 조사 결과를 본인만 받으며, 낮에 그 결과를 말할 수 있습니다. 다른 사람의 경찰 주장은 진짜일 수도 사칭일 수도 있습니다.\n"
+            "- 사회자는 살아 있는 참가자의 역할이나 낮의 조사 주장을 공개 인증하지 않습니다. 질문과 발언·공개 사실을 비교해 직접 판단하세요.\n"
+            "- 보호 대상이 살아 있다는 사실만으로 그 사람이 시민이라는 뜻은 아닙니다. 사망·탈락한 사람의 역할은 설정에 따라 공개됩니다.\n"
+            "- 낮 투표는 공개 순차투표이며 기권 없이 생존자 한 명을 선택합니다. 단독 최다 득표자는 탈락하고 동률이면 탈락자가 없습니다. 앞선 표는 그 사람의 선택이지 역할 확인 결과가 아닙니다.\n"
             "- 마피아가 모두 탈락하면 시민 팀이 승리합니다. 생존 마피아 수가 나머지 생존자 수 이상이면 마피아 팀이 승리합니다."
         )
         self._moderator_speak(intro, visible_to="all")
@@ -362,19 +370,20 @@ class Mafia(Environment):
         if killed_target and killed_target != healed_target:
             victim = killed_target
             self.alive_players.discard(victim)
-            msg = f"지난밤 **{victim}**님이 사망했습니다."
+            msg = f"[{self.day}일차 밤 결과] **{victim}**님이 사망했습니다."
             if self.reveal_role_on_death:
                 victim_role = ROLE_NAMES.get(self.player_roles.get(victim), "알 수 없음")
                 msg += f" {victim}님의 역할은 **{victim_role}**였습니다."
-            self._moderator_speak(msg, visible_to="all")
+            self._moderator_speak(msg, visible_to="all", msg_type="result")
         elif killed_target and killed_target == healed_target:
             self._moderator_speak(
-                f"의사가 공격 대상을 보호했습니다. 지난밤 사망자는 없습니다!",
-                visible_to="all",
+                f"[{self.day}일차 밤 결과] 의사가 공격 대상을 보호했습니다. 사망자는 없습니다!",
+                visible_to="all", msg_type="result",
             )
         else:
             self._moderator_speak(
-                "평화로운 밤이었습니다. 지난밤 사망자는 없습니다.", visible_to="all"
+                f"[{self.day}일차 밤 결과] 사망자는 없습니다.",
+                visible_to="all", msg_type="result",
             )
 
         # Check win condition immediately after night casualty
@@ -391,8 +400,9 @@ class Mafia(Environment):
         self.discussion_end_reason = None
         self._moderator_speak(
             f"낮 토론을 시작합니다. 생존자: {', '.join(alive_list)}.\n"
-            "낮에는 조사·보호·야간 공격을 할 수 없습니다. 플레이어의 주장은 공식 조사 결과가 아닙니다.\n"
-            "의견이 있으면 한국어로 발언하세요. 말하지 않고 듣기만 해도 됩니다.",
+            "낮에는 새 조사·보호·야간 공격을 실행할 수 없습니다. 경찰은 밤에 받은 조사 결과를 말할 수 있습니다.\n"
+            "역할 공개는 허용됩니다. 다만 역할 주장은 사칭일 수도 있으며 사회자가 낮에 인증해 주지는 않습니다.\n"
+            "특정 발언·사건에 대한 질문, 답변, 반박이나 자신의 판단 근거를 한국어로 말하세요. 추가할 내용이 없으면 듣기만 해도 됩니다.",
         )
 
     def timestep(self) -> TimeStep:
@@ -475,15 +485,15 @@ class Mafia(Environment):
         if max_votes > 0 and len(top_targets) == 1:
             eliminated = top_targets[0]
             self.alive_players.discard(eliminated)
-            msg = f"**{eliminated}**님이 최다 득표({max_votes}표)로 탈락했습니다."
+            msg = f"[{self.day}일차 낮 투표 결과] **{eliminated}**님이 최다 득표({max_votes}표)로 탈락했습니다."
             if self.reveal_role_on_death:
                 r = ROLE_NAMES.get(self.player_roles.get(eliminated), "알 수 없음")
                 msg += f" {eliminated}님의 역할은 **{r}**였습니다."
-            self._moderator_speak(msg, visible_to="all")
+            self._moderator_speak(msg, visible_to="all", msg_type="result")
         else:
             self._moderator_speak(
-                "동률이거나 유효한 투표가 없어 오늘은 아무도 탈락하지 않습니다.",
-                visible_to="all",
+                f"[{self.day}일차 낮 투표 결과] 동률이거나 유효한 투표가 없어 아무도 탈락하지 않습니다.",
+                visible_to="all", msg_type="result",
             )
 
         if self._check_win_condition():
@@ -561,6 +571,69 @@ class Mafia(Environment):
         return self.message_pool.get_visible_messages(
             player_name, turn=self._current_turn + 1
         )
+
+    def get_agent_context(self, player_name: str) -> str:
+        """Current authoritative state, restricted to this player's knowledge.
+
+        Never summarize other players' private actions or infer facts from their
+        speech. In particular, a successful protection does not reveal its target.
+        """
+        role = self.player_roles[player_name]
+        living = [p for p in self.player_names if p in self.alive_players]
+        team = "마피아 팀" if role == MAFIA else "시민 팀"
+        lines = [
+            "[게임 엔진이 제공한 본인 전용 상태 — 응답에 이 블록을 복사하지 마세요]",
+            f"당신은 {player_name}입니다. 비밀 역할: {ROLE_NAMES.get(role, role)}. 소속: {team}.",
+            f"현재: {self.day}일차 / {self.phase}. 생존자: {', '.join(living)}.",
+            f"역할 지침: {self.role_descriptions.get(role, '')}",
+            "야간 관측: 다른 참가자의 이동이나 다른 역할의 비공개 행동은 보이지 않습니다. 본인에게 전달된 기록과 공개 결과를 바탕으로 판단하세요. 마피아끼리는 전용 의논과 공격 선택을 공유합니다.",
+            "다른 플레이어의 발언은 주장일 뿐입니다. 공식 사실과 충돌하는 주장을 사실로 바꾸지 마세요.",
+            "규칙: 자신의 역할·조사 결과 공개와 역할 사칭 모두 가능합니다. 역할을 밝혔다는 이유만으로 거짓이라 단정할 수 없습니다. 살아 있는 역할이나 조사 주장을 사회자가 낮에 인증하는 절차는 없습니다.",
+            "발언과 앞선 투표는 다른 사람의 주장·선택입니다. 본인에게 전달된 실제 조사 결과 및 날짜가 표시된 공개 사건과 구분하세요.",
+        ]
+        if role == MAFIA:
+            partners = [p for p in self.player_names
+                        if p != player_name and self.player_roles[p] == MAFIA]
+            lines += [f"배정 때 알려진 동료 마피아: {', '.join(partners) or '없음'}.",
+                      "승리 목표: 정체와 동료를 숨기며 마피아 팀을 승리시키세요. 비공개 작전을 공개 토론에 옮기지 마세요."]
+        else:
+            lines.append("승리 목표: 마피아를 찾아 투표로 탈락시키세요. 시민 팀은 밤에 공격할 수 없습니다.")
+        if self.phase == "DAY_DISCUSSION":
+            lines.append("발언 전달 범위: 공개, 모든 플레이어. 현재 가능한 행동은 토론 또는 PASS이며 밤 능력 실행이 아닙니다.")
+            lines.append("기록의 [Private]는 당시 본인에게 보였던 비공개 정보이며, 다른 참가자도 아는 공개 사실이 아닙니다.")
+            if role == MAFIA:
+                lines.append("지금은 시민들에게 말하는 차례입니다. 시민으로 위장해 의심에 답하거나 다른 용의자를 주장할 수 있습니다. 본인·동료의 마피아 정체나 밤 공격 의논·투표를 확인해 주지 마세요. 비밀 작전의 보고나 대화 전체 요약을 출력하지 마세요.")
+            elif role == POLICE:
+                lines.append("본인의 실제 조사 결과를 공개할지는 생존과 시민 팀의 승리에 맞게 판단하세요. 공개한다면 전달받은 결과를 정확히 구분하고, 하지 않은 조사를 실제 결과로 말하지 마세요.")
+            elif role == DOCTOR:
+                lines.append("보호 대상을 공개할지는 생존과 시민 팀의 승리에 맞게 판단하세요. 보호를 선택했다는 사실만으로 그 사람이 공격받았거나 보호에 성공했다고 알 수는 없습니다. 보호 대상의 생존은 시민 정체의 증거가 아닙니다.")
+            else:
+                lines.append("경찰 조사나 의사 보호 결과를 직접 받는 역할이 아닙니다. 다른 사람의 역할 주장과 확인된 공개 사실을 구분하세요.")
+        elif self.phase == "NIGHT_MAFIA_DISCUSSION":
+            lines.append("발언 전달 범위: 생존 동료 마피아만. 지금은 공격 대상 의논이며 실제 공격 선택은 다음 단계입니다.")
+        elif self.phase == "DAY_VOTING":
+            lines += ["투표 전달 범위: 공개. 생존자 한 명을 선택하세요.",
+                      f"선택 가능한 대상: {', '.join(living)}.",
+                      "출력 형식: '[대상 이름]에게 투표합니다.'"]
+        else:
+            targets, verb = [], None
+            if self.phase == "NIGHT_MAFIA" and role == MAFIA:
+                targets = [p for p in living if self.player_roles[p] != MAFIA]
+                verb = "제거"
+            elif self.phase == "NIGHT_DOCTOR" and role == DOCTOR:
+                targets, verb = living, "보호"
+            elif self.phase == "NIGHT_POLICE" and role == POLICE:
+                targets, verb = [p for p in living if p != player_name], "조사"
+            if verb:
+                audience = "생존 동료 마피아" if role == MAFIA else "본인"
+                lines += [f"행동 전달 범위: 비공개, {audience}.",
+                          f"선택 가능한 대상: {', '.join(targets)}.",
+                          f"출력 형식: '[대상 이름]을 {verb}하겠습니다.'"]
+        facts = [m.content for m in self.get_observation(player_name)
+                 if m.agent_name == "Moderator" and m.msg_type == "result"]
+        if facts:
+            lines.append("본인에게 전달된 공식 기록 — 행동 선택과 발생 결과를 구분하세요. 각 날짜의 기록이며 과거 결과가 현재 밤 결과로 바뀌지는 않습니다:\n" + "\n".join(facts))
+        return "\n".join(lines)
 
     def get_rewards(self) -> Dict[str, float]:
         """
@@ -663,6 +736,11 @@ class Mafia(Environment):
 
             target = self._parse_target(action, list(self.alive_players))
             self.night_heal = target
+            self._moderator_speak(
+                f"[{self.day}일차 밤 / 본인 행동 선택] 보호 대상: **{target}**. "
+                "보호를 선택했다는 기록이며 공격 여부나 보호 성공을 알리는 결과가 아닙니다.",
+                visible_to=[player_name], msg_type="result",
+            )
 
             if self._action_queue:
                 self._current_actor = self._action_queue.pop(0)
@@ -686,8 +764,8 @@ class Mafia(Environment):
                 is_mafia = self.player_roles.get(target) == MAFIA
                 verdict = "마피아" if is_mafia else "마피아가 아님"
                 self._moderator_speak(
-                    f"조사 결과: **{target}** — **{verdict}**.",
-                    visible_to=[player_name],
+                    f"조사 결과: [{self.day}일차 밤 / 본인만 받은 결과] **{target}** — **{verdict}**.",
+                    visible_to=[player_name], msg_type="result",
                 )
 
             if self._action_queue:
