@@ -14,39 +14,33 @@ from dataclasses import dataclass
 from typing import Callable, List, Optional, Tuple
 
 from .agent import SIGNAL_END_OF_CONVERSATION
-from .message import Message
+from .message import Message, visibility_label
 
 INTENT_PROMPT = (
-    "REQUEST intent: 현재 얼마나 발언하고 싶은지 비공개로 판단하세요. "
-    "0=듣기, 1=기다려도 됨, 2=말하고 싶음, 3=지금 답변하거나 반박하고 싶음. "
-    "대화와 자신의 역할을 고려하세요. 침묵해도 괜찮습니다. "
-    "0, 1, 2, 3 중 숫자 하나만 출력하고 이유는 쓰지 마세요."
+    "REQUEST intent: 지금 발언할 필요성을 비공개로 판단하세요. "
+    "0=할 말 없이 듣기, 1=할 말은 있지만 기다릴 수 있음, "
+    "2=지금 보탤 정보·질문·주장이 있음, "
+    "3=나에게 향한 질문·의혹·반박에 지금 응답할 필요가 있음. "
+    "0~3 중 숫자 하나만 출력하세요."
 )
 SPEECH_PROMPT = (
-    "REQUEST speech: 지금 토론에 참여할 수 있습니다. "
-    "현재는 낮 토론입니다. 조사·보호·야간 공격은 밤의 해당 역할 차례에만 가능합니다. "
-    "낮에 새 조사를 실행하거나 새 결과를 요청하지 마세요. 지난밤의 결과를 공개하거나 "
-    "자신의 추측·주장을 말할 수는 있지만, 플레이어의 말이 공식 조사 결과가 되는 것은 아닙니다. "
-    "최근 대화에 자연스러운 한국어로 짧게 1~3문장으로 답하세요. "
-    "듣기로 마음을 바꿨다면 따옴표나 문장부호 없이 PASS만 출력하세요. "
-    "CONTINUE와 END_DISCUSSION은 사회자 전용 명령입니다. 다른 사람을 사칭하지 마세요."
+    "REQUEST speech: 현재는 공개 낮 토론입니다. 현재 대화에 보탤 자신의 발언을 하세요. "
+    "한국어 대사 1~3문장만 출력하세요. 말하지 않으려면 PASS만 출력하세요."
 )
 _CALL_SLOTS = threading.BoundedSemaphore(32)
 
 MODERATION_PROMPT = (
-    "REQUEST moderation: 토론을 이끌지 말고 종료가 필요한지만 조용히 판단하세요. "
-    "기본 응답은 CONTINUE입니다. 새로운 근거·질문·답변·반박이 오가면 개입하지 마세요. "
-    "단순히 같은 사람을 의심하거나 발언이 짧다는 이유로 종료하지 마세요. "
-    "충분한 답변·반론 기회가 있었고 새 정보 없이 같은 주장만 계속 반복되거나, "
-    "논의가 충분히 끝나 투표할 시점일 때만 END_DISCUSSION을 출력하세요. "
-    "특정인을 지목하거나 발언을 요구하지 마세요. 발언 순서 배정, 의견 유도, 요약, "
-    "평가, 역할 추측, 안내문은 금지합니다. CONTINUE 또는 END_DISCUSSION 중 하나만 출력하세요."
+    "REQUEST moderation: 현재 낮 토론의 종료 여부만 판단하세요. "
+    "새 근거·질문·답변·반박이 오가거나 답변 기회가 남아 있으면 CONTINUE, "
+    "충분한 답변 기회 뒤 새 내용 없이 반복되거나 논의가 끝났으면 END_DISCUSSION입니다. "
+    "전원의 동의나 역할 확정까지 기다릴 필요는 없습니다. "
+    "발언 순서나 의견에 개입하지 말고 CONTINUE 또는 END_DISCUSSION만 출력하세요."
 )
 
 
 def observation_prompt(name, observation, instruction, system_prompt=""):
     lines = [f"System: {system_prompt}\nYou are {name}."]
-    lines.extend(f"{m.agent_name}: {m.content.strip()}" for m in observation)
+    lines.extend(f"{visibility_label(m)} {m.agent_name}: {m.content.strip()}" for m in observation)
     lines.extend([instruction, "You: "])
     return "\n".join(lines)
 
@@ -75,6 +69,7 @@ class DecisionRequest:
 
 @dataclass
 class DecisionRecord:
+    """trainable marks RL format eligibility, never expert/IL quality approval."""
     request: DecisionRequest
     response: str = ""
     valid: bool = False
@@ -116,6 +111,7 @@ class MafiaDiscussionController:
         self._stage = "intent"
         self._scores = {}
         self._score_records = {}
+        self._closing_replies = False
         self._retry_names = []
         self._rounds = 0
         self._silence_prompted = False
@@ -136,6 +132,7 @@ class MafiaDiscussionController:
             self._stage = "intent"
             self._scores = {}
             self._score_records = {}
+            self._closing_replies = False
             self._retry_names = []
             self._rounds = 0
             self._silence_prompted = False
@@ -154,17 +151,18 @@ class MafiaDiscussionController:
             )
             if self._moderating_silence:
                 instruction += "\n모두 침묵하고 있으며 입력 대기도 끝났습니다. 발언을 강요하지 말고 END_DISCUSSION으로 투표로 넘기세요."
+            elif self._closing_replies:
+                instruction += "\n종료 판단 뒤의 추가 답변·반박을 포함해 다시 판단하세요."
         else:
             obs = tuple(env.get_observation(name))
             instruction = {"intent": INTENT_PROMPT, "speech": SPEECH_PROMPT}.get(
                 kind, f"REQUEST game_action: {name}의 현재 단계는 {env.phase}입니다. 현재 단계의 지시를 따르고 한국어로 응답하세요. 대상 이름은 표시된 그대로 쓰세요."
             )
         if env.phase == "NIGHT_MAFIA_DISCUSSION":
-            context = ("현재는 밤의 마피아 전용 비공개 의논입니다. 생존 동료 마피아에게만 전달됩니다. "
-                       "오늘 밤 공격할 대상을 함께 상의하세요. 이 단계의 발언은 공격 확정이 아닙니다. ")
+            context = "현재는 생존 동료 마피아만 보는 공격 대상 의논이며, 실제 공격 투표는 다음 단계입니다. "
             if kind == "speech":
                 instruction = ("REQUEST speech: " + context
-                               + "동료의 의견에 한국어 1~3문장으로 답하세요. 말하지 않으려면 PASS만 출력하세요.")
+                               + "현재 의논에 보탤 자신의 발언을 하세요. 한국어 대사 1~3문장만 출력하세요. 말하지 않으려면 PASS만 출력하세요.")
             elif kind == "intent":
                 instruction += "\n" + context
         if retry:
@@ -207,6 +205,7 @@ class MafiaDiscussionController:
         self.generation += 1
         self._stage = "intent"
         self._scores = {}
+        self._closing_replies = False
         self._retry_names = []
 
     def pause(self):
@@ -220,6 +219,7 @@ class MafiaDiscussionController:
             if self._stage not in ("moderation", "silence_moderation"):
                 self._stage = "intent"
             self._scores = {}
+            self._closing_replies = False
             self._retry_names = []
 
     def resume(self):
@@ -291,6 +291,7 @@ class MafiaDiscussionController:
                     self._end(reason)
                     raise ValueError("의논이 끝났습니다. 대상 선택 차례를 확인해주세요.")
                 self.env.discussion_speak(name, text)
+                self._closing_replies = False
                 self._stage = "moderation" if self._use_moderator else "intent"
                 self._silence_deadline = None
                 self._scores = {}
@@ -385,6 +386,14 @@ class MafiaDiscussionController:
             elif not self._scores:
                 self._fail("All AI intent requests failed")
             else:
+                if self._closing_replies:
+                    # Recollect after the last speech: a previous speaking turn
+                    # does not discharge a later request to answer or rebut.
+                    self._scores = {name: score for name, score in self._scores.items()
+                                    if score == 3 and name != self.env.last_speaker}
+                    if not self._scores:
+                        self._end("moderator")
+                        return
                 self._stage = "choose"
         elif kind == "speech":
             rec = results[0]
@@ -395,7 +404,11 @@ class MafiaDiscussionController:
                 self._stage = "choose"
             else:
                 self.env.discussion_speak(rec.request.player_name, rec.response)
-                self._stage = "moderation" if self._use_moderator else "intent"
+                if self._closing_replies:
+                    self._scores.pop(rec.request.player_name, None)
+                    self._stage = "choose"
+                else:
+                    self._stage = "moderation" if self._use_moderator else "intent"
         elif kind == "moderation":
             rec = results[0]
             if not rec.valid:
@@ -406,15 +419,21 @@ class MafiaDiscussionController:
                     if self._moderating_silence:
                         self._end("silence")
                     else:
+                        self._closing_replies = False
                         self._stage = "intent"
                 else:
                     self._fail("Moderator failed: " + str(rec.error))
             elif control_token(rec.response) == "END_DISCUSSION":
-                self._end("moderator")
+                if self._closing_replies or self._moderating_silence:
+                    self._end("moderator")
+                else:
+                    self._closing_replies = True
+                    self._stage = "intent"
             elif control_token(rec.response) == "CONTINUE":
                 if self._moderating_silence:
                     self._end("silence")
                 else:
+                    self._closing_replies = False
                     self._stage = "intent"
         else:
             rec = results[0]
@@ -484,7 +503,7 @@ class MafiaDiscussionController:
                     if self._submit([name], "speech"):
                         self._score_records[name].selected = True
                 else:
-                    self._stage = "silence"
+                    self._stage = "moderation" if self._closing_replies else "silence"
             elif self._stage in ("moderation", "silence_moderation"):
                 self._moderating_silence = self._stage == "silence_moderation"
                 self._submit(["Moderator"], "moderation")

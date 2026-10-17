@@ -7,7 +7,7 @@ from typing import List
 
 from tenacity import retry, retry_if_exception, stop_after_attempt, wait_random_exponential
 
-from ..message import SYSTEM_NAME, Message
+from ..message import SYSTEM_NAME, Message, visibility_label
 from .base import IntelligenceBackend, register_backend
 
 try:
@@ -32,6 +32,10 @@ DEFAULT_MODEL = "gpt-3.5-turbo"
 END_OF_MESSAGE = "<EOS>"  # End of message token specified by us not OpenAI
 STOP = ("<|endoftext|>", END_OF_MESSAGE)  # End of sentence token
 BASE_PROMPT = f"The messages always end with the token {END_OF_MESSAGE}."
+FINAL_REASONING_TRANSITION = (
+    "\nI have finished reasoning. I will now output only the requested final response, "
+    "with no analysis, speaker prefix, or visibility labels.\n</think>\n\n"
+)
 
 
 def _retryable_error(exc):
@@ -85,43 +89,87 @@ class OpenAIChat(IntelligenceBackend):
         self.temperature = temperature
         self.max_tokens = max_tokens
         self.model = model
+        self.sampling_options = {key: kwargs[key] for key in ("top_p", "presence_penalty")
+                                 if kwargs.get(key) is not None}
+        self.sampling_extra = {key: kwargs[key] for key in ("top_k", "min_p", "repetition_penalty")
+                               if kwargs.get(key) is not None}
+        self.enable_thinking = kwargs.get("enable_thinking")
+        self.thinking_token_budget = kwargs.get("thinking_token_budget")
+        self.control_thinking_token_budget = kwargs.get("control_thinking_token_budget")
+        for budget in (self.thinking_token_budget, self.control_thinking_token_budget):
+            if budget is not None and (self.enable_thinking is not True
+                                       or not isinstance(budget, int) or not 0 < budget < max_tokens):
+                raise ValueError("Thinking budgets require thinking ON and must be between 0 and max_tokens")
+        self.system_messages_at_start = kwargs.get("system_messages_at_start", False)
         self._token_parameter = "max_completion_tokens"
         self.merge_other_agent_as_user = merge_other_agents_as_one_user
 
     @staticmethod
-    def format_messages(agent_name, system_prompt, history_messages, request_msg=None):
+    def format_messages(agent_name, system_prompt, history_messages, request_msg=None,
+                        system_messages_at_start=False, native_termination=False):
         def participant_name(name):
             return "player_" + hashlib.sha256(name.encode("utf-8")).hexdigest()[:24]
 
         messages = [{"role": "system", "content": system_prompt}]
         for msg in history_messages:
+            content = f"{visibility_label(msg)} [{msg.agent_name}]: {msg.content}"
             if msg.agent_name == SYSTEM_NAME:
-                messages.append({"role": "system", "content": msg.content})
+                messages.append({"role": "user" if system_messages_at_start else "system",
+                                 "content": content})
+            elif native_termination and msg.agent_name == agent_name:
+                # Preserve the audience without teaching the model to reproduce
+                # transcript headers as part of its next answer.
+                messages.append({
+                    "role": "user",
+                    "content": "Previous reply metadata (not answer text): "
+                               f"{visibility_label(msg)}. The next message is its text.",
+                })
+                messages.append({"role": "assistant", "name": participant_name(agent_name),
+                                 "content": msg.content})
             else:
                 messages.append({
                     "role": "assistant" if msg.agent_name == agent_name else "user",
                     "name": participant_name(msg.agent_name),
-                    "content": f"[{msg.agent_name}]: {msg.content}{END_OF_MESSAGE}",
+                    "content": content if native_termination else f"{content}{END_OF_MESSAGE}",
                 })
         messages.append({
-            "role": "system",
+            "role": "user" if system_messages_at_start else "system",
             "content": request_msg.content if request_msg else f"Now you speak, {agent_name}.",
         })
         return messages
 
     @retry(stop=stop_after_attempt(6), wait=wait_random_exponential(min=1, max=60),
            retry=retry_if_exception(_retryable_error))
-    def _get_response(self, messages):
+    def _get_response(self, messages, thinking_token_budget=None,
+                      _final_continuation=False, _token_limit=None):
         # Keep max_tokens in saved arena configs; translate at the API boundary.
         # Cache explicit capability rejections so subsequent turns avoid them.
         while True:
-            options = {"temperature": self.temperature, "stop": STOP}
+            options = {"temperature": self.temperature, **self.sampling_options}
+            # A reasoning model may quote a textual marker while still thinking.
+            # Its native end-of-turn token must terminate generation instead.
+            if self.enable_thinking is not True:
+                options["stop"] = STOP
+            if self.enable_thinking is not None:
+                options["extra_body"] = {"chat_template_kwargs": {"enable_thinking": self.enable_thinking}}
+            budget = self.thinking_token_budget if thinking_token_budget is None else thinking_token_budget
+            if budget is not None and not _final_continuation:
+                options["extra_body"]["thinking_token_budget"] = budget
+            if _final_continuation:
+                # Reasoning is already in the assistant prefix. Qwen's
+                # non-streaming parser otherwise labels a tag-free continuation
+                # as reasoning again; do not open a second thinking section.
+                options["extra_body"]["chat_template_kwargs"]["enable_thinking"] = False
+                options["extra_body"].update(continue_final_message=True,
+                                             add_generation_prompt=False)
+            if self.sampling_extra:
+                options.setdefault("extra_body", {}).update(self.sampling_extra)
             capability_key = (client, self.model, self.temperature)
             with _CAPABILITY_LOCK:
                 unsupported = set(_UNSUPPORTED_OPTIONS.get(capability_key, ()))
             for option in unsupported:
                 options.pop(option, None)
-            options[self._token_parameter] = self.max_tokens
+            options[self._token_parameter] = self.max_tokens if _token_limit is None else _token_limit
             try:
                 completion = client.chat.completions.create(
                     model=self.model, messages=messages, **options)
@@ -147,9 +195,30 @@ class OpenAIChat(IntelligenceBackend):
                 else:
                     raise
 
-        response = completion.choices[0].message.content
+        message = completion.choices[0].message
+        response = message.content or ""
+        if self.enable_thinking is True:
+            # The API already separates reasoning. If another boundary appears
+            # in content, keep only its final segment, never the reasoning field.
+            response = response.rsplit("</think>", 1)[-1]
+            response = response.split("<think>", 1)[0]
         if not response or not response.strip():
             reason = completion.choices[0].finish_reason
+            reasoning = (getattr(message, "reasoning", None)
+                         or getattr(message, "reasoning_content", None))
+            used = completion.usage.completion_tokens if completion.usage else self.max_tokens
+            remaining = self.max_tokens - used
+            if (self.enable_thinking is True and not _final_continuation
+                    and reasoning and remaining > 0):
+                logging.warning("Model %s returned no final text (%s); continuing once "
+                                "after its private reasoning, with %s tokens remaining",
+                                self.model, reason, remaining)
+                continuation_messages = [*messages, {
+                    "role": "assistant",
+                    "content": "<think>\n" + reasoning.strip() + FINAL_REASONING_TRANSITION,
+                }]
+                return self._get_response(continuation_messages, thinking_token_budget,
+                                          _final_continuation=True, _token_limit=remaining)
             if reason == "length":
                 suggested_limit = max(4096, self.max_tokens * 2)
                 raise ValueError(
@@ -183,20 +252,28 @@ class OpenAIChat(IntelligenceBackend):
         """
 
         # Merge the role description and the global prompt as the system prompt for the agent
+        native_termination = self.enable_thinking is True
+        base_prompt = "" if native_termination else BASE_PROMPT
         if global_prompt:  # Prepend the global prompt if it exists
-            system_prompt = f"You are a helpful assistant.\n{global_prompt.strip()}\n{BASE_PROMPT}\n\nYour name is {agent_name}.\n\nYour role:{role_desc}"
+            system_prompt = f"You are a helpful assistant.\n{global_prompt.strip()}\n{base_prompt}\n\nYour name is {agent_name}.\n\nYour role:{role_desc}"
         else:
-            system_prompt = f"You are a helpful assistant. Your name is {agent_name}.\n\nYour role:{role_desc}\n\n{BASE_PROMPT}"
+            system_prompt = f"You are a helpful assistant. Your name is {agent_name}.\n\nYour role:{role_desc}\n\n{base_prompt}"
 
-        messages = self.format_messages(agent_name, system_prompt, history_messages, request_msg)
+        messages = self.format_messages(agent_name, system_prompt, history_messages, request_msg,
+                                        system_messages_at_start=self.system_messages_at_start,
+                                        native_termination=native_termination)
 
-        response = self._get_response(messages, *args, **kwargs)
+        budget = self.thinking_token_budget
+        if request_msg and request_msg.content.startswith(("REQUEST intent:", "REQUEST moderation:")):
+            budget = self.control_thinking_token_budget or budget
+        response = self._get_response(messages, *args, thinking_token_budget=budget, **kwargs)
 
-        # Remove the agent name if the response starts with it
-        response = re.sub(rf"^\s*\[.*]:", "", response).strip()  # noqa: F541
+        # Strip transcript metadata only; a bracketed vote target is content.
+        speaker = rf"(?:\[{re.escape(agent_name)}\]|{re.escape(agent_name)})\s*:\s*"
+        audience = r"\[(?:Public|Private)(?::[^\]\r\n]*)?\]\s*:?\s*"
         response = re.sub(
-            rf"^\s*{re.escape(agent_name)}\s*:", "", response
-        ).strip()  # noqa: F451
+            rf"^\s*(?:{audience}|{speaker})+", "", response, flags=re.IGNORECASE
+        ).strip()
 
         # Remove the tailing end of message token
         response = re.sub(rf"{END_OF_MESSAGE}$", "", response).strip()

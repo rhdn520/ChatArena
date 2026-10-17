@@ -1,12 +1,21 @@
 import hashlib
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import List, Union
 from uuid import uuid1
 
 # Preserved roles
 SYSTEM_NAME = "System"
 MODERATOR_NAME = "Moderator"
+
+
+def visibility_label(message):
+    """Describe an already-filtered observation without revealing other recipients.
+
+    Listing a private message's recipients could reveal hidden roles (e.g. the
+    non-liar group). Only distinguish public history from private knowledge.
+    """
+    return "[Public: all players]" if message.visible_to == "all" else "[Private: visible to you; not public]"
 
 
 def _hash(input: str):
@@ -41,7 +50,7 @@ class Message:
     agent_name: str
     content: str
     turn: int
-    timestamp: int = time.time_ns()
+    timestamp: int = field(default_factory=time.time_ns)
     visible_to: Union[str, List[str]] = "all"
     msg_type: str = "text"
     logged: bool = False  # Whether the message is logged in the database
