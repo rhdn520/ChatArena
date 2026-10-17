@@ -105,9 +105,7 @@ class LiarGame(Environment):
         player = self.player_names[self._clue_index]
         self._moderator_speak(
             f"Round {self.current_round}/{self.clue_rounds}: {player}, give one "
-            "indirect clue about the secret word. Do not explicitly say the word. "
-            "Be specific enough to show you know it without making it too easy "
-            "for the Liar to infer.",
+            "short clue. Output only your clue.",
             visible_to=[player], msg_type="instruction",
         )
 
@@ -147,8 +145,11 @@ class LiarGame(Environment):
         self._moderator_speak(
             "You are a non-liar. "
             f"The secret word is {self.secret_word}. "
-            "Give indirect clues that show you know the word without making it "
-            "obvious to the Liar. Do not explicitly say the secret word.",
+            "Express something recognizable to players who already know the word, "
+            "rather than explaining the answer to someone who does not. "
+            "Keep a real connection to the word without naming it or making it "
+            "immediately identifiable. Consider what your contribution reveals "
+            "together with the public statements so far, not only on its own.",
             visible_to=self.non_liar_names,
         )
         self._moderator_speak(
