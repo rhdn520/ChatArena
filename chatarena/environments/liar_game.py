@@ -105,7 +105,7 @@ class LiarGame(Environment):
         player = self.player_names[self._clue_index]
         self._moderator_speak(
             f"Round {self.current_round}/{self.clue_rounds}: {player}, give one "
-            "short clue. Output only your clue.",
+            "short statement. Output only your statement.",
             visible_to=[player], msg_type="instruction",
         )
 
@@ -145,16 +145,21 @@ class LiarGame(Environment):
         self._moderator_speak(
             "You are a non-liar. "
             f"The secret word is {self.secret_word}. "
-            "Express something recognizable to players who already know the word, "
-            "rather than explaining the answer to someone who does not. "
-            "Keep a real connection to the word without naming it or making it "
-            "immediately identifiable. Consider what your contribution reveals "
-            "together with the public statements so far, not only on its own.",
+            "Your goal is to survive without being accused as the Liar. "
+            "Watch what others say and any suspicion directed at you, and decide "
+            "for yourself what to say. Your statements are not meant to explain "
+            "the answer or convey what you know to other non-liars. Decide how "
+            "specific to be and what to conceal based on how it could affect you "
+            "in the current situation. However, if the Liar figures out the "
+            "secret word, the non-liars lose. Consider what your statement reveals "
+            "both on its own and together with preceding public statements. "
+            "When judging others' statements, consider whether they know the word "
+            "or are using preceding statements to blend in.",
             visible_to=self.non_liar_names,
         )
         self._moderator_speak(
             "You are the Liar. You do not know the secret word. Infer it from "
-            "others' clues while blending in. Give a plausible clue on your turn.",
+            "others' statements while blending in. Give a plausible statement on your turn.",
             visible_to=[self.liar_name],
         )
         self._announce_clue_turn()

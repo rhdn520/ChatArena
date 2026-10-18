@@ -1,0 +1,41 @@
+{
+  "game": "liar_game",
+  "seed": 1,
+  "model": "Qwen/Qwen3.5-9B",
+  "players": 5,
+  "enable_thinking": true,
+  "clue_rounds": 1,
+  "moderator_enabled": false,
+  "moderator_model": null,
+  "temperature": 1.0,
+  "max_tokens": 4096,
+  "sampling_parameters": {
+    "temperature": 1.0,
+    "top_p": 0.95,
+    "top_k": 20,
+    "min_p": 0.0,
+    "presence_penalty": 1.5,
+    "repetition_penalty": 1.0
+  },
+  "request_timeout": 300.0,
+  "reasoning_calls": 1,
+  "thinking_token_budget": 2048,
+  "control_thinking_token_budget": 256,
+  "terminal": false,
+  "steps": 0,
+  "error": "ValueError: Model Qwen/Qwen3.5-9B returned no text (finish_reason=length, token_limit=4096). Please increase the token limit. UI의 'AI 응답 설정 → 최대 생성 토큰'을 8192 이상으로 늘린 뒤 초기화하여 새 게임을 시작해주세요. 내부 추론도 한도에 포함됩니다.",
+  "rewards": {
+    "Player 1": 0.0,
+    "Player 2": 0.0,
+    "Player 3": 0.0,
+    "Player 4": 0.0,
+    "Player 5": 0.0
+  },
+  "winner": null,
+  "termination_reason": null,
+  "api_calls": 1,
+  "rejected_actions": [],
+  "decision_schema_version": 2,
+  "training_labels": "format_eligible checks format/freshness only; expert_approved is false until independently reviewed. No automatic expert/IL labels.",
+  "note": "Seed controls game randomness; API sampling is not seeded. Target recognition is separate from strict response format compliance."
+}

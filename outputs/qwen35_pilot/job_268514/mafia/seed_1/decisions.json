@@ -1,0 +1,254 @@
+[
+  {
+    "request": {
+      "player_name": "Player 1",
+      "kind": "intent",
+      "observation": [
+        {
+          "agent_name": "Moderator",
+          "content": "마피아 게임에 오신 것을 환영합니다! 참가자는 총 7명입니다: Player 2, Player 3, Player 1, Player 5, Player 6, Player 4, Player 7.\n역할 구성: 마피아 2명, 의사 1명, 시민 3명, 경찰 1명.\n게임 규칙:\n- 밤과 낮이 번갈아 진행됩니다.\n- 밤에는 마피아가 제거할 대상을 선택하고, 의사는 보호, 경찰은 조사를 수행합니다.\n- 낮에는 단서를 토론한 뒤 마피아로 의심되는 사람에게 투표해 탈락시킵니다.\n- 마피아가 모두 탈락하면 시민 팀이 승리합니다. 생존 마피아 수가 나머지 생존자 수 이상이면 마피아 팀이 승리합니다.",
+          "turn": 0,
+          "timestamp": 1791342074515397524,
+          "visible_to": "all",
+          "msg_type": "text",
+          "logged": false
+        },
+        {
+          "agent_name": "Moderator",
+          "content": "당신의 비밀 역할은 **마피아**입니다.\n역할 설명: 밤에는 시민을 제거하고, 낮에는 정체를 숨기며 시민 사이에 섞여 행동하세요.\n동료 마피아: Player 3.",
+          "turn": 0,
+          "timestamp": 1791342074515397524,
+          "visible_to": [
+            "Player 1"
+          ],
+          "msg_type": "text",
+          "logged": false
+        },
+        {
+          "agent_name": "Moderator",
+          "content": "--- 1일차: 밤 ---\n밤이 되었습니다. 모두 눈을 감아주세요.",
+          "turn": 0,
+          "timestamp": 1791342074515397524,
+          "visible_to": "all",
+          "msg_type": "text",
+          "logged": false
+        },
+        {
+          "agent_name": "Moderator",
+          "content": "마피아 비공개 의논을 시작합니다. 동료와 오늘 밤 공격할 대상을 상의하세요. 이 대화는 생존 마피아에게만 보입니다. 의논 후 각자 한 표씩 투표하며, 최다 득표 대상을 공격합니다. 동률이면 공동 최다 득표자 중 무작위로 결정합니다.",
+          "turn": 0,
+          "timestamp": 1791342074515397524,
+          "visible_to": [
+            "Player 1",
+            "Player 3"
+          ],
+          "msg_type": "text",
+          "logged": false
+        }
+      ],
+      "instruction": "REQUEST intent: 현재 얼마나 발언하고 싶은지 비공개로 판단하세요. 0=듣기, 1=기다려도 됨, 2=말하고 싶음, 3=지금 답변하거나 반박하고 싶음. 대화와 자신의 역할을 고려하세요. 침묵해도 괜찮습니다. 0, 1, 2, 3 중 숫자 하나만 출력하고 이유는 쓰지 마세요.\n현재는 밤의 마피아 전용 비공개 의논입니다. 생존 동료 마피아에게만 전달됩니다. 오늘 밤 공격할 대상을 함께 상의하세요. 이 단계의 발언은 공격 확정이 아닙니다. ",
+      "prompt": "System: \nYou are Player 1.\nModerator: 마피아 게임에 오신 것을 환영합니다! 참가자는 총 7명입니다: Player 2, Player 3, Player 1, Player 5, Player 6, Player 4, Player 7.\n역할 구성: 마피아 2명, 의사 1명, 시민 3명, 경찰 1명.\n게임 규칙:\n- 밤과 낮이 번갈아 진행됩니다.\n- 밤에는 마피아가 제거할 대상을 선택하고, 의사는 보호, 경찰은 조사를 수행합니다.\n- 낮에는 단서를 토론한 뒤 마피아로 의심되는 사람에게 투표해 탈락시킵니다.\n- 마피아가 모두 탈락하면 시민 팀이 승리합니다. 생존 마피아 수가 나머지 생존자 수 이상이면 마피아 팀이 승리합니다.\nModerator: 당신의 비밀 역할은 **마피아**입니다.\n역할 설명: 밤에는 시민을 제거하고, 낮에는 정체를 숨기며 시민 사이에 섞여 행동하세요.\n동료 마피아: Player 3.\nModerator: --- 1일차: 밤 ---\n밤이 되었습니다. 모두 눈을 감아주세요.\nModerator: 마피아 비공개 의논을 시작합니다. 동료와 오늘 밤 공격할 대상을 상의하세요. 이 대화는 생존 마피아에게만 보입니다. 의논 후 각자 한 표씩 투표하며, 최다 득표 대상을 공격합니다. 동률이면 공동 최다 득표자 중 무작위로 결정합니다.\nREQUEST intent: 현재 얼마나 발언하고 싶은지 비공개로 판단하세요. 0=듣기, 1=기다려도 됨, 2=말하고 싶음, 3=지금 답변하거나 반박하고 싶음. 대화와 자신의 역할을 고려하세요. 침묵해도 괜찮습니다. 0, 1, 2, 3 중 숫자 하나만 출력하고 이유는 쓰지 마세요.\n현재는 밤의 마피아 전용 비공개 의논입니다. 생존 동료 마피아에게만 전달됩니다. 오늘 밤 공격할 대상을 함께 상의하세요. 이 단계의 발언은 공격 확정이 아닙니다. \nYou: ",
+      "session_id": "3c0dd0e8fa9a4483b52793828aff95ac",
+      "version": 0,
+      "phase": "NIGHT_MAFIA_DISCUSSION",
+      "generation": 0,
+      "retry": false
+    },
+    "response": "",
+    "valid": false,
+    "trainable": false,
+    "score": null,
+    "selected": false,
+    "stale": false,
+    "error": "BadRequestError: Error code: 400 - {'error': {'message': 'System message must be at the beginning.', 'type': 'BadRequestError', 'param': None, 'code': 400}}"
+  },
+  {
+    "request": {
+      "player_name": "Player 3",
+      "kind": "intent",
+      "observation": [
+        {
+          "agent_name": "Moderator",
+          "content": "마피아 게임에 오신 것을 환영합니다! 참가자는 총 7명입니다: Player 2, Player 3, Player 1, Player 5, Player 6, Player 4, Player 7.\n역할 구성: 마피아 2명, 의사 1명, 시민 3명, 경찰 1명.\n게임 규칙:\n- 밤과 낮이 번갈아 진행됩니다.\n- 밤에는 마피아가 제거할 대상을 선택하고, 의사는 보호, 경찰은 조사를 수행합니다.\n- 낮에는 단서를 토론한 뒤 마피아로 의심되는 사람에게 투표해 탈락시킵니다.\n- 마피아가 모두 탈락하면 시민 팀이 승리합니다. 생존 마피아 수가 나머지 생존자 수 이상이면 마피아 팀이 승리합니다.",
+          "turn": 0,
+          "timestamp": 1791342074515397524,
+          "visible_to": "all",
+          "msg_type": "text",
+          "logged": false
+        },
+        {
+          "agent_name": "Moderator",
+          "content": "당신의 비밀 역할은 **마피아**입니다.\n역할 설명: 밤에는 시민을 제거하고, 낮에는 정체를 숨기며 시민 사이에 섞여 행동하세요.\n동료 마피아: Player 1.",
+          "turn": 0,
+          "timestamp": 1791342074515397524,
+          "visible_to": [
+            "Player 3"
+          ],
+          "msg_type": "text",
+          "logged": false
+        },
+        {
+          "agent_name": "Moderator",
+          "content": "--- 1일차: 밤 ---\n밤이 되었습니다. 모두 눈을 감아주세요.",
+          "turn": 0,
+          "timestamp": 1791342074515397524,
+          "visible_to": "all",
+          "msg_type": "text",
+          "logged": false
+        },
+        {
+          "agent_name": "Moderator",
+          "content": "마피아 비공개 의논을 시작합니다. 동료와 오늘 밤 공격할 대상을 상의하세요. 이 대화는 생존 마피아에게만 보입니다. 의논 후 각자 한 표씩 투표하며, 최다 득표 대상을 공격합니다. 동률이면 공동 최다 득표자 중 무작위로 결정합니다.",
+          "turn": 0,
+          "timestamp": 1791342074515397524,
+          "visible_to": [
+            "Player 1",
+            "Player 3"
+          ],
+          "msg_type": "text",
+          "logged": false
+        }
+      ],
+      "instruction": "REQUEST intent: 현재 얼마나 발언하고 싶은지 비공개로 판단하세요. 0=듣기, 1=기다려도 됨, 2=말하고 싶음, 3=지금 답변하거나 반박하고 싶음. 대화와 자신의 역할을 고려하세요. 침묵해도 괜찮습니다. 0, 1, 2, 3 중 숫자 하나만 출력하고 이유는 쓰지 마세요.\n현재는 밤의 마피아 전용 비공개 의논입니다. 생존 동료 마피아에게만 전달됩니다. 오늘 밤 공격할 대상을 함께 상의하세요. 이 단계의 발언은 공격 확정이 아닙니다. ",
+      "prompt": "System: \nYou are Player 3.\nModerator: 마피아 게임에 오신 것을 환영합니다! 참가자는 총 7명입니다: Player 2, Player 3, Player 1, Player 5, Player 6, Player 4, Player 7.\n역할 구성: 마피아 2명, 의사 1명, 시민 3명, 경찰 1명.\n게임 규칙:\n- 밤과 낮이 번갈아 진행됩니다.\n- 밤에는 마피아가 제거할 대상을 선택하고, 의사는 보호, 경찰은 조사를 수행합니다.\n- 낮에는 단서를 토론한 뒤 마피아로 의심되는 사람에게 투표해 탈락시킵니다.\n- 마피아가 모두 탈락하면 시민 팀이 승리합니다. 생존 마피아 수가 나머지 생존자 수 이상이면 마피아 팀이 승리합니다.\nModerator: 당신의 비밀 역할은 **마피아**입니다.\n역할 설명: 밤에는 시민을 제거하고, 낮에는 정체를 숨기며 시민 사이에 섞여 행동하세요.\n동료 마피아: Player 1.\nModerator: --- 1일차: 밤 ---\n밤이 되었습니다. 모두 눈을 감아주세요.\nModerator: 마피아 비공개 의논을 시작합니다. 동료와 오늘 밤 공격할 대상을 상의하세요. 이 대화는 생존 마피아에게만 보입니다. 의논 후 각자 한 표씩 투표하며, 최다 득표 대상을 공격합니다. 동률이면 공동 최다 득표자 중 무작위로 결정합니다.\nREQUEST intent: 현재 얼마나 발언하고 싶은지 비공개로 판단하세요. 0=듣기, 1=기다려도 됨, 2=말하고 싶음, 3=지금 답변하거나 반박하고 싶음. 대화와 자신의 역할을 고려하세요. 침묵해도 괜찮습니다. 0, 1, 2, 3 중 숫자 하나만 출력하고 이유는 쓰지 마세요.\n현재는 밤의 마피아 전용 비공개 의논입니다. 생존 동료 마피아에게만 전달됩니다. 오늘 밤 공격할 대상을 함께 상의하세요. 이 단계의 발언은 공격 확정이 아닙니다. \nYou: ",
+      "session_id": "3c0dd0e8fa9a4483b52793828aff95ac",
+      "version": 0,
+      "phase": "NIGHT_MAFIA_DISCUSSION",
+      "generation": 0,
+      "retry": false
+    },
+    "response": "",
+    "valid": false,
+    "trainable": false,
+    "score": null,
+    "selected": false,
+    "stale": false,
+    "error": "BadRequestError: Error code: 400 - {'error': {'message': 'System message must be at the beginning.', 'type': 'BadRequestError', 'param': None, 'code': 400}}"
+  },
+  {
+    "request": {
+      "player_name": "Player 1",
+      "kind": "intent",
+      "observation": [
+        {
+          "agent_name": "Moderator",
+          "content": "마피아 게임에 오신 것을 환영합니다! 참가자는 총 7명입니다: Player 2, Player 3, Player 1, Player 5, Player 6, Player 4, Player 7.\n역할 구성: 마피아 2명, 의사 1명, 시민 3명, 경찰 1명.\n게임 규칙:\n- 밤과 낮이 번갈아 진행됩니다.\n- 밤에는 마피아가 제거할 대상을 선택하고, 의사는 보호, 경찰은 조사를 수행합니다.\n- 낮에는 단서를 토론한 뒤 마피아로 의심되는 사람에게 투표해 탈락시킵니다.\n- 마피아가 모두 탈락하면 시민 팀이 승리합니다. 생존 마피아 수가 나머지 생존자 수 이상이면 마피아 팀이 승리합니다.",
+          "turn": 0,
+          "timestamp": 1791342074515397524,
+          "visible_to": "all",
+          "msg_type": "text",
+          "logged": false
+        },
+        {
+          "agent_name": "Moderator",
+          "content": "당신의 비밀 역할은 **마피아**입니다.\n역할 설명: 밤에는 시민을 제거하고, 낮에는 정체를 숨기며 시민 사이에 섞여 행동하세요.\n동료 마피아: Player 3.",
+          "turn": 0,
+          "timestamp": 1791342074515397524,
+          "visible_to": [
+            "Player 1"
+          ],
+          "msg_type": "text",
+          "logged": false
+        },
+        {
+          "agent_name": "Moderator",
+          "content": "--- 1일차: 밤 ---\n밤이 되었습니다. 모두 눈을 감아주세요.",
+          "turn": 0,
+          "timestamp": 1791342074515397524,
+          "visible_to": "all",
+          "msg_type": "text",
+          "logged": false
+        },
+        {
+          "agent_name": "Moderator",
+          "content": "마피아 비공개 의논을 시작합니다. 동료와 오늘 밤 공격할 대상을 상의하세요. 이 대화는 생존 마피아에게만 보입니다. 의논 후 각자 한 표씩 투표하며, 최다 득표 대상을 공격합니다. 동률이면 공동 최다 득표자 중 무작위로 결정합니다.",
+          "turn": 0,
+          "timestamp": 1791342074515397524,
+          "visible_to": [
+            "Player 1",
+            "Player 3"
+          ],
+          "msg_type": "text",
+          "logged": false
+        }
+      ],
+      "instruction": "REQUEST intent: 현재 얼마나 발언하고 싶은지 비공개로 판단하세요. 0=듣기, 1=기다려도 됨, 2=말하고 싶음, 3=지금 답변하거나 반박하고 싶음. 대화와 자신의 역할을 고려하세요. 침묵해도 괜찮습니다. 0, 1, 2, 3 중 숫자 하나만 출력하고 이유는 쓰지 마세요.\n현재는 밤의 마피아 전용 비공개 의논입니다. 생존 동료 마피아에게만 전달됩니다. 오늘 밤 공격할 대상을 함께 상의하세요. 이 단계의 발언은 공격 확정이 아닙니다. \n이전 응답의 형식이 잘못되었습니다. 0~3 중 숫자 하나만 출력하세요.",
+      "prompt": "System: \nYou are Player 1.\nModerator: 마피아 게임에 오신 것을 환영합니다! 참가자는 총 7명입니다: Player 2, Player 3, Player 1, Player 5, Player 6, Player 4, Player 7.\n역할 구성: 마피아 2명, 의사 1명, 시민 3명, 경찰 1명.\n게임 규칙:\n- 밤과 낮이 번갈아 진행됩니다.\n- 밤에는 마피아가 제거할 대상을 선택하고, 의사는 보호, 경찰은 조사를 수행합니다.\n- 낮에는 단서를 토론한 뒤 마피아로 의심되는 사람에게 투표해 탈락시킵니다.\n- 마피아가 모두 탈락하면 시민 팀이 승리합니다. 생존 마피아 수가 나머지 생존자 수 이상이면 마피아 팀이 승리합니다.\nModerator: 당신의 비밀 역할은 **마피아**입니다.\n역할 설명: 밤에는 시민을 제거하고, 낮에는 정체를 숨기며 시민 사이에 섞여 행동하세요.\n동료 마피아: Player 3.\nModerator: --- 1일차: 밤 ---\n밤이 되었습니다. 모두 눈을 감아주세요.\nModerator: 마피아 비공개 의논을 시작합니다. 동료와 오늘 밤 공격할 대상을 상의하세요. 이 대화는 생존 마피아에게만 보입니다. 의논 후 각자 한 표씩 투표하며, 최다 득표 대상을 공격합니다. 동률이면 공동 최다 득표자 중 무작위로 결정합니다.\nREQUEST intent: 현재 얼마나 발언하고 싶은지 비공개로 판단하세요. 0=듣기, 1=기다려도 됨, 2=말하고 싶음, 3=지금 답변하거나 반박하고 싶음. 대화와 자신의 역할을 고려하세요. 침묵해도 괜찮습니다. 0, 1, 2, 3 중 숫자 하나만 출력하고 이유는 쓰지 마세요.\n현재는 밤의 마피아 전용 비공개 의논입니다. 생존 동료 마피아에게만 전달됩니다. 오늘 밤 공격할 대상을 함께 상의하세요. 이 단계의 발언은 공격 확정이 아닙니다. \n이전 응답의 형식이 잘못되었습니다. 0~3 중 숫자 하나만 출력하세요.\nYou: ",
+      "session_id": "3c0dd0e8fa9a4483b52793828aff95ac",
+      "version": 0,
+      "phase": "NIGHT_MAFIA_DISCUSSION",
+      "generation": 0,
+      "retry": true
+    },
+    "response": "",
+    "valid": false,
+    "trainable": false,
+    "score": null,
+    "selected": false,
+    "stale": false,
+    "error": "BadRequestError: Error code: 400 - {'error': {'message': 'System message must be at the beginning.', 'type': 'BadRequestError', 'param': None, 'code': 400}}"
+  },
+  {
+    "request": {
+      "player_name": "Player 3",
+      "kind": "intent",
+      "observation": [
+        {
+          "agent_name": "Moderator",
+          "content": "마피아 게임에 오신 것을 환영합니다! 참가자는 총 7명입니다: Player 2, Player 3, Player 1, Player 5, Player 6, Player 4, Player 7.\n역할 구성: 마피아 2명, 의사 1명, 시민 3명, 경찰 1명.\n게임 규칙:\n- 밤과 낮이 번갈아 진행됩니다.\n- 밤에는 마피아가 제거할 대상을 선택하고, 의사는 보호, 경찰은 조사를 수행합니다.\n- 낮에는 단서를 토론한 뒤 마피아로 의심되는 사람에게 투표해 탈락시킵니다.\n- 마피아가 모두 탈락하면 시민 팀이 승리합니다. 생존 마피아 수가 나머지 생존자 수 이상이면 마피아 팀이 승리합니다.",
+          "turn": 0,
+          "timestamp": 1791342074515397524,
+          "visible_to": "all",
+          "msg_type": "text",
+          "logged": false
+        },
+        {
+          "agent_name": "Moderator",
+          "content": "당신의 비밀 역할은 **마피아**입니다.\n역할 설명: 밤에는 시민을 제거하고, 낮에는 정체를 숨기며 시민 사이에 섞여 행동하세요.\n동료 마피아: Player 1.",
+          "turn": 0,
+          "timestamp": 1791342074515397524,
+          "visible_to": [
+            "Player 3"
+          ],
+          "msg_type": "text",
+          "logged": false
+        },
+        {
+          "agent_name": "Moderator",
+          "content": "--- 1일차: 밤 ---\n밤이 되었습니다. 모두 눈을 감아주세요.",
+          "turn": 0,
+          "timestamp": 1791342074515397524,
+          "visible_to": "all",
+          "msg_type": "text",
+          "logged": false
+        },
+        {
+          "agent_name": "Moderator",
+          "content": "마피아 비공개 의논을 시작합니다. 동료와 오늘 밤 공격할 대상을 상의하세요. 이 대화는 생존 마피아에게만 보입니다. 의논 후 각자 한 표씩 투표하며, 최다 득표 대상을 공격합니다. 동률이면 공동 최다 득표자 중 무작위로 결정합니다.",
+          "turn": 0,
+          "timestamp": 1791342074515397524,
+          "visible_to": [
+            "Player 1",
+            "Player 3"
+          ],
+          "msg_type": "text",
+          "logged": false
+        }
+      ],
+      "instruction": "REQUEST intent: 현재 얼마나 발언하고 싶은지 비공개로 판단하세요. 0=듣기, 1=기다려도 됨, 2=말하고 싶음, 3=지금 답변하거나 반박하고 싶음. 대화와 자신의 역할을 고려하세요. 침묵해도 괜찮습니다. 0, 1, 2, 3 중 숫자 하나만 출력하고 이유는 쓰지 마세요.\n현재는 밤의 마피아 전용 비공개 의논입니다. 생존 동료 마피아에게만 전달됩니다. 오늘 밤 공격할 대상을 함께 상의하세요. 이 단계의 발언은 공격 확정이 아닙니다. \n이전 응답의 형식이 잘못되었습니다. 0~3 중 숫자 하나만 출력하세요.",
+      "prompt": "System: \nYou are Player 3.\nModerator: 마피아 게임에 오신 것을 환영합니다! 참가자는 총 7명입니다: Player 2, Player 3, Player 1, Player 5, Player 6, Player 4, Player 7.\n역할 구성: 마피아 2명, 의사 1명, 시민 3명, 경찰 1명.\n게임 규칙:\n- 밤과 낮이 번갈아 진행됩니다.\n- 밤에는 마피아가 제거할 대상을 선택하고, 의사는 보호, 경찰은 조사를 수행합니다.\n- 낮에는 단서를 토론한 뒤 마피아로 의심되는 사람에게 투표해 탈락시킵니다.\n- 마피아가 모두 탈락하면 시민 팀이 승리합니다. 생존 마피아 수가 나머지 생존자 수 이상이면 마피아 팀이 승리합니다.\nModerator: 당신의 비밀 역할은 **마피아**입니다.\n역할 설명: 밤에는 시민을 제거하고, 낮에는 정체를 숨기며 시민 사이에 섞여 행동하세요.\n동료 마피아: Player 1.\nModerator: --- 1일차: 밤 ---\n밤이 되었습니다. 모두 눈을 감아주세요.\nModerator: 마피아 비공개 의논을 시작합니다. 동료와 오늘 밤 공격할 대상을 상의하세요. 이 대화는 생존 마피아에게만 보입니다. 의논 후 각자 한 표씩 투표하며, 최다 득표 대상을 공격합니다. 동률이면 공동 최다 득표자 중 무작위로 결정합니다.\nREQUEST intent: 현재 얼마나 발언하고 싶은지 비공개로 판단하세요. 0=듣기, 1=기다려도 됨, 2=말하고 싶음, 3=지금 답변하거나 반박하고 싶음. 대화와 자신의 역할을 고려하세요. 침묵해도 괜찮습니다. 0, 1, 2, 3 중 숫자 하나만 출력하고 이유는 쓰지 마세요.\n현재는 밤의 마피아 전용 비공개 의논입니다. 생존 동료 마피아에게만 전달됩니다. 오늘 밤 공격할 대상을 함께 상의하세요. 이 단계의 발언은 공격 확정이 아닙니다. \n이전 응답의 형식이 잘못되었습니다. 0~3 중 숫자 하나만 출력하세요.\nYou: ",
+      "session_id": "3c0dd0e8fa9a4483b52793828aff95ac",
+      "version": 0,
+      "phase": "NIGHT_MAFIA_DISCUSSION",
+      "generation": 0,
+      "retry": true
+    },
+    "response": "",
+    "valid": false,
+    "trainable": false,
+    "score": null,
+    "selected": false,
+    "stale": false,
+    "error": "BadRequestError: Error code: 400 - {'error': {'message': 'System message must be at the beginning.', 'type': 'BadRequestError', 'param': None, 'code': 400}}"
+  }
+]

@@ -1,0 +1,1237 @@
+=== API call 1 | clue ===
+[system / ]
+You are a helpful assistant.
+You are playing Liar Game. There is exactly one Liar. At the start of each game, the Moderator privately tells each player their role. Every non-Liar receives the same secret word; the Liar does not receive it. Depending on the game setting, the topic may be announced to everyone or hidden from everyone. Do not assume the topic is known unless the Moderator announces it. Each player gives one indirect clue per round in fixed player order, for the number of rounds announced by the Moderator; all clues are public. There are no question-and-answer turns. Non-Liars aim to identify the Liar in the final vote and prevent the Liar from guessing the secret word. A non-Liar should give a clue specific enough to convince other informed players, but must not say the secret word or make it too easy for the Liar to infer. The Liar aims to avoid being identified; if identified, the Liar can still win by correctly guessing the secret word. As the Liar, infer the word from public clues and give a plausible indirect clue without admitting you do not know it. After all clue rounds, every player votes once for one other player as the Liar. When voting, output only 'I vote for Player N' with a real player number other than your own; malformed or self-votes count as abstentions. The player with the most votes is accused; ties are resolved in configured player order. If the accused player is not the Liar, the Liar wins immediately. If the accused player is the Liar, the Liar gets exactly one final word guess: a correct guess wins for the Liar, and an incorrect guess wins for the non-Liars. Winners receive 1.0 reward and losers 0.0. Follow the latest Moderator instruction for the current phase. On a clue turn output only one concise indirect clue, not a vote or a question; on a voting turn output only the vote; on a final guess turn output only the guessed word, with no explanation. Never speak for another player or reveal a private role message.
+The messages always end with the token <EOS>.
+
+Your name is Player 1.
+
+Your role:You are Player 1. Follow the latest Moderator instruction. During voting use: I vote for [Player Name].
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: Liar Game begins with 5 players and exactly one Liar. There will be 2 clue round(s), followed by one vote from each player.<EOS>
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: Topic: Places.<EOS>
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: You are a non-liar. The secret word is Amusement Park. Give indirect clues that show you know the word without making it obvious to the Liar. Do not explicitly say the secret word.<EOS>
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: Round 1/2: Player 1, give one indirect clue about the secret word. Do not explicitly say the word. Be specific enough to show you know it without making it too easy for the Liar to infer.<EOS>
+[user / ]
+Now you speak, Player 1.
+[원문 API 응답]
+{
+  "id": "chatcmpl-bcf899f3fd6656ca",
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "logprobs": null,
+      "message": {
+        "content": "I think it's a place where people go to enjoy rides and games.",
+        "refusal": null,
+        "role": "assistant",
+        "annotations": null,
+        "audio": null,
+        "function_call": null,
+        "tool_calls": [],
+        "reasoning": null
+      },
+      "stop_reason": null,
+      "token_ids": null,
+      "routed_experts": null
+    }
+  ],
+  "created": 1791342691,
+  "model": "Qwen/Qwen3.5-9B",
+  "object": "chat.completion",
+  "moderation": null,
+  "service_tier": null,
+  "system_fingerprint": "vllm-0.22.0-346972fe",
+  "usage": {
+    "completion_tokens": 16,
+    "prompt_tokens": 670,
+    "total_tokens": 686,
+    "completion_tokens_details": null,
+    "prompt_tokens_details": null
+  },
+  "prompt_logprobs": null,
+  "prompt_token_ids": null,
+  "prompt_text": null,
+  "kv_transfer_params": null
+}
+
+=== API call 2 | clue ===
+[system / ]
+You are a helpful assistant.
+You are playing Liar Game. There is exactly one Liar. At the start of each game, the Moderator privately tells each player their role. Every non-Liar receives the same secret word; the Liar does not receive it. Depending on the game setting, the topic may be announced to everyone or hidden from everyone. Do not assume the topic is known unless the Moderator announces it. Each player gives one indirect clue per round in fixed player order, for the number of rounds announced by the Moderator; all clues are public. There are no question-and-answer turns. Non-Liars aim to identify the Liar in the final vote and prevent the Liar from guessing the secret word. A non-Liar should give a clue specific enough to convince other informed players, but must not say the secret word or make it too easy for the Liar to infer. The Liar aims to avoid being identified; if identified, the Liar can still win by correctly guessing the secret word. As the Liar, infer the word from public clues and give a plausible indirect clue without admitting you do not know it. After all clue rounds, every player votes once for one other player as the Liar. When voting, output only 'I vote for Player N' with a real player number other than your own; malformed or self-votes count as abstentions. The player with the most votes is accused; ties are resolved in configured player order. If the accused player is not the Liar, the Liar wins immediately. If the accused player is the Liar, the Liar gets exactly one final word guess: a correct guess wins for the Liar, and an incorrect guess wins for the non-Liars. Winners receive 1.0 reward and losers 0.0. Follow the latest Moderator instruction for the current phase. On a clue turn output only one concise indirect clue, not a vote or a question; on a voting turn output only the vote; on a final guess turn output only the guessed word, with no explanation. Never speak for another player or reveal a private role message.
+The messages always end with the token <EOS>.
+
+Your name is Player 2.
+
+Your role:You are Player 2. Follow the latest Moderator instruction. During voting use: I vote for [Player Name].
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: Liar Game begins with 5 players and exactly one Liar. There will be 2 clue round(s), followed by one vote from each player.<EOS>
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: Topic: Places.<EOS>
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: You are a non-liar. The secret word is Amusement Park. Give indirect clues that show you know the word without making it obvious to the Liar. Do not explicitly say the secret word.<EOS>
+[user / player_27a99f01e114bf92a249aa3e]
+[Player 1]: I think it's a place where people go to enjoy rides and games.<EOS>
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: Round 1/2: Player 2, give one indirect clue about the secret word. Do not explicitly say the word. Be specific enough to show you know it without making it too easy for the Liar to infer.<EOS>
+[user / ]
+Now you speak, Player 2.
+[원문 API 응답]
+{
+  "id": "chatcmpl-b0f683de84b90511",
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "logprobs": null,
+      "message": {
+        "content": "It's a location with ticket gates, roller coasters, and food stands.",
+        "refusal": null,
+        "role": "assistant",
+        "annotations": null,
+        "audio": null,
+        "function_call": null,
+        "tool_calls": [],
+        "reasoning": null
+      },
+      "stop_reason": null,
+      "token_ids": null,
+      "routed_experts": null
+    }
+  ],
+  "created": 1791342691,
+  "model": "Qwen/Qwen3.5-9B",
+  "object": "chat.completion",
+  "moderation": null,
+  "service_tier": null,
+  "system_fingerprint": "vllm-0.22.0-346972fe",
+  "usage": {
+    "completion_tokens": 17,
+    "prompt_tokens": 697,
+    "total_tokens": 714,
+    "completion_tokens_details": null,
+    "prompt_tokens_details": null
+  },
+  "prompt_logprobs": null,
+  "prompt_token_ids": null,
+  "prompt_text": null,
+  "kv_transfer_params": null
+}
+
+=== API call 3 | clue ===
+[system / ]
+You are a helpful assistant.
+You are playing Liar Game. There is exactly one Liar. At the start of each game, the Moderator privately tells each player their role. Every non-Liar receives the same secret word; the Liar does not receive it. Depending on the game setting, the topic may be announced to everyone or hidden from everyone. Do not assume the topic is known unless the Moderator announces it. Each player gives one indirect clue per round in fixed player order, for the number of rounds announced by the Moderator; all clues are public. There are no question-and-answer turns. Non-Liars aim to identify the Liar in the final vote and prevent the Liar from guessing the secret word. A non-Liar should give a clue specific enough to convince other informed players, but must not say the secret word or make it too easy for the Liar to infer. The Liar aims to avoid being identified; if identified, the Liar can still win by correctly guessing the secret word. As the Liar, infer the word from public clues and give a plausible indirect clue without admitting you do not know it. After all clue rounds, every player votes once for one other player as the Liar. When voting, output only 'I vote for Player N' with a real player number other than your own; malformed or self-votes count as abstentions. The player with the most votes is accused; ties are resolved in configured player order. If the accused player is not the Liar, the Liar wins immediately. If the accused player is the Liar, the Liar gets exactly one final word guess: a correct guess wins for the Liar, and an incorrect guess wins for the non-Liars. Winners receive 1.0 reward and losers 0.0. Follow the latest Moderator instruction for the current phase. On a clue turn output only one concise indirect clue, not a vote or a question; on a voting turn output only the vote; on a final guess turn output only the guessed word, with no explanation. Never speak for another player or reveal a private role message.
+The messages always end with the token <EOS>.
+
+Your name is Player 3.
+
+Your role:You are Player 3. Follow the latest Moderator instruction. During voting use: I vote for [Player Name].
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: Liar Game begins with 5 players and exactly one Liar. There will be 2 clue round(s), followed by one vote from each player.<EOS>
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: Topic: Places.<EOS>
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: You are a non-liar. The secret word is Amusement Park. Give indirect clues that show you know the word without making it obvious to the Liar. Do not explicitly say the secret word.<EOS>
+[user / player_27a99f01e114bf92a249aa3e]
+[Player 1]: I think it's a place where people go to enjoy rides and games.<EOS>
+[user / player_4b67834a4c0fa5590d2e36e3]
+[Player 2]: It's a location with ticket gates, roller coasters, and food stands.<EOS>
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: Round 1/2: Player 3, give one indirect clue about the secret word. Do not explicitly say the word. Be specific enough to show you know it without making it too easy for the Liar to infer.<EOS>
+[user / ]
+Now you speak, Player 3.
+[원문 API 응답]
+{
+  "id": "chatcmpl-85d300c843e4fc6a",
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "logprobs": null,
+      "message": {
+        "content": "It involves a large playground area with themed sections and souvenir shops.",
+        "refusal": null,
+        "role": "assistant",
+        "annotations": null,
+        "audio": null,
+        "function_call": null,
+        "tool_calls": [],
+        "reasoning": null
+      },
+      "stop_reason": null,
+      "token_ids": null,
+      "routed_experts": null
+    }
+  ],
+  "created": 1791342692,
+  "model": "Qwen/Qwen3.5-9B",
+  "object": "chat.completion",
+  "moderation": null,
+  "service_tier": null,
+  "system_fingerprint": "vllm-0.22.0-346972fe",
+  "usage": {
+    "completion_tokens": 14,
+    "prompt_tokens": 725,
+    "total_tokens": 739,
+    "completion_tokens_details": null,
+    "prompt_tokens_details": null
+  },
+  "prompt_logprobs": null,
+  "prompt_token_ids": null,
+  "prompt_text": null,
+  "kv_transfer_params": null
+}
+
+=== API call 4 | clue ===
+[system / ]
+You are a helpful assistant.
+You are playing Liar Game. There is exactly one Liar. At the start of each game, the Moderator privately tells each player their role. Every non-Liar receives the same secret word; the Liar does not receive it. Depending on the game setting, the topic may be announced to everyone or hidden from everyone. Do not assume the topic is known unless the Moderator announces it. Each player gives one indirect clue per round in fixed player order, for the number of rounds announced by the Moderator; all clues are public. There are no question-and-answer turns. Non-Liars aim to identify the Liar in the final vote and prevent the Liar from guessing the secret word. A non-Liar should give a clue specific enough to convince other informed players, but must not say the secret word or make it too easy for the Liar to infer. The Liar aims to avoid being identified; if identified, the Liar can still win by correctly guessing the secret word. As the Liar, infer the word from public clues and give a plausible indirect clue without admitting you do not know it. After all clue rounds, every player votes once for one other player as the Liar. When voting, output only 'I vote for Player N' with a real player number other than your own; malformed or self-votes count as abstentions. The player with the most votes is accused; ties are resolved in configured player order. If the accused player is not the Liar, the Liar wins immediately. If the accused player is the Liar, the Liar gets exactly one final word guess: a correct guess wins for the Liar, and an incorrect guess wins for the non-Liars. Winners receive 1.0 reward and losers 0.0. Follow the latest Moderator instruction for the current phase. On a clue turn output only one concise indirect clue, not a vote or a question; on a voting turn output only the vote; on a final guess turn output only the guessed word, with no explanation. Never speak for another player or reveal a private role message.
+The messages always end with the token <EOS>.
+
+Your name is Player 4.
+
+Your role:You are Player 4. Follow the latest Moderator instruction. During voting use: I vote for [Player Name].
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: Liar Game begins with 5 players and exactly one Liar. There will be 2 clue round(s), followed by one vote from each player.<EOS>
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: Topic: Places.<EOS>
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: You are a non-liar. The secret word is Amusement Park. Give indirect clues that show you know the word without making it obvious to the Liar. Do not explicitly say the secret word.<EOS>
+[user / player_27a99f01e114bf92a249aa3e]
+[Player 1]: I think it's a place where people go to enjoy rides and games.<EOS>
+[user / player_4b67834a4c0fa5590d2e36e3]
+[Player 2]: It's a location with ticket gates, roller coasters, and food stands.<EOS>
+[user / player_91de349605a422977a28c81e]
+[Player 3]: It involves a large playground area with themed sections and souvenir shops.<EOS>
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: Round 1/2: Player 4, give one indirect clue about the secret word. Do not explicitly say the word. Be specific enough to show you know it without making it too easy for the Liar to infer.<EOS>
+[user / ]
+Now you speak, Player 4.
+[원문 API 응답]
+{
+  "id": "chatcmpl-9b761e8b4ed24975",
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "logprobs": null,
+      "message": {
+        "content": "It's a destination featuring a Ferris wheel, a carousel, and a midway with carnival games.",
+        "refusal": null,
+        "role": "assistant",
+        "annotations": null,
+        "audio": null,
+        "function_call": null,
+        "tool_calls": [],
+        "reasoning": null
+      },
+      "stop_reason": null,
+      "token_ids": null,
+      "routed_experts": null
+    }
+  ],
+  "created": 1791342692,
+  "model": "Qwen/Qwen3.5-9B",
+  "object": "chat.completion",
+  "moderation": null,
+  "service_tier": null,
+  "system_fingerprint": "vllm-0.22.0-346972fe",
+  "usage": {
+    "completion_tokens": 21,
+    "prompt_tokens": 750,
+    "total_tokens": 771,
+    "completion_tokens_details": null,
+    "prompt_tokens_details": null
+  },
+  "prompt_logprobs": null,
+  "prompt_token_ids": null,
+  "prompt_text": null,
+  "kv_transfer_params": null
+}
+
+=== API call 5 | clue ===
+[system / ]
+You are a helpful assistant.
+You are playing Liar Game. There is exactly one Liar. At the start of each game, the Moderator privately tells each player their role. Every non-Liar receives the same secret word; the Liar does not receive it. Depending on the game setting, the topic may be announced to everyone or hidden from everyone. Do not assume the topic is known unless the Moderator announces it. Each player gives one indirect clue per round in fixed player order, for the number of rounds announced by the Moderator; all clues are public. There are no question-and-answer turns. Non-Liars aim to identify the Liar in the final vote and prevent the Liar from guessing the secret word. A non-Liar should give a clue specific enough to convince other informed players, but must not say the secret word or make it too easy for the Liar to infer. The Liar aims to avoid being identified; if identified, the Liar can still win by correctly guessing the secret word. As the Liar, infer the word from public clues and give a plausible indirect clue without admitting you do not know it. After all clue rounds, every player votes once for one other player as the Liar. When voting, output only 'I vote for Player N' with a real player number other than your own; malformed or self-votes count as abstentions. The player with the most votes is accused; ties are resolved in configured player order. If the accused player is not the Liar, the Liar wins immediately. If the accused player is the Liar, the Liar gets exactly one final word guess: a correct guess wins for the Liar, and an incorrect guess wins for the non-Liars. Winners receive 1.0 reward and losers 0.0. Follow the latest Moderator instruction for the current phase. On a clue turn output only one concise indirect clue, not a vote or a question; on a voting turn output only the vote; on a final guess turn output only the guessed word, with no explanation. Never speak for another player or reveal a private role message.
+The messages always end with the token <EOS>.
+
+Your name is Player 5.
+
+Your role:You are Player 5. Follow the latest Moderator instruction. During voting use: I vote for [Player Name].
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: Liar Game begins with 5 players and exactly one Liar. There will be 2 clue round(s), followed by one vote from each player.<EOS>
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: Topic: Places.<EOS>
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: You are the Liar. You do not know the secret word. Infer it from others' clues while blending in. Give a plausible clue on your turn.<EOS>
+[user / player_27a99f01e114bf92a249aa3e]
+[Player 1]: I think it's a place where people go to enjoy rides and games.<EOS>
+[user / player_4b67834a4c0fa5590d2e36e3]
+[Player 2]: It's a location with ticket gates, roller coasters, and food stands.<EOS>
+[user / player_91de349605a422977a28c81e]
+[Player 3]: It involves a large playground area with themed sections and souvenir shops.<EOS>
+[user / player_811e7a3900f62f1f8432dfc0]
+[Player 4]: It's a destination featuring a Ferris wheel, a carousel, and a midway with carnival games.<EOS>
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: Round 1/2: Player 5, give one indirect clue about the secret word. Do not explicitly say the word. Be specific enough to show you know it without making it too easy for the Liar to infer.<EOS>
+[user / ]
+Now you speak, Player 5.
+[원문 API 응답]
+{
+  "id": "chatcmpl-b7c2836774684d3f",
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "logprobs": null,
+      "message": {
+        "content": "It's a place with a distinct entrance fee and multiple amusement areas within a single complex.",
+        "refusal": null,
+        "role": "assistant",
+        "annotations": null,
+        "audio": null,
+        "function_call": null,
+        "tool_calls": [],
+        "reasoning": null
+      },
+      "stop_reason": null,
+      "token_ids": null,
+      "routed_experts": null
+    }
+  ],
+  "created": 1791342692,
+  "model": "Qwen/Qwen3.5-9B",
+  "object": "chat.completion",
+  "moderation": null,
+  "service_tier": null,
+  "system_fingerprint": "vllm-0.22.0-346972fe",
+  "usage": {
+    "completion_tokens": 19,
+    "prompt_tokens": 773,
+    "total_tokens": 792,
+    "completion_tokens_details": null,
+    "prompt_tokens_details": null
+  },
+  "prompt_logprobs": null,
+  "prompt_token_ids": null,
+  "prompt_text": null,
+  "kv_transfer_params": null
+}
+
+=== API call 6 | clue ===
+[system / ]
+You are a helpful assistant.
+You are playing Liar Game. There is exactly one Liar. At the start of each game, the Moderator privately tells each player their role. Every non-Liar receives the same secret word; the Liar does not receive it. Depending on the game setting, the topic may be announced to everyone or hidden from everyone. Do not assume the topic is known unless the Moderator announces it. Each player gives one indirect clue per round in fixed player order, for the number of rounds announced by the Moderator; all clues are public. There are no question-and-answer turns. Non-Liars aim to identify the Liar in the final vote and prevent the Liar from guessing the secret word. A non-Liar should give a clue specific enough to convince other informed players, but must not say the secret word or make it too easy for the Liar to infer. The Liar aims to avoid being identified; if identified, the Liar can still win by correctly guessing the secret word. As the Liar, infer the word from public clues and give a plausible indirect clue without admitting you do not know it. After all clue rounds, every player votes once for one other player as the Liar. When voting, output only 'I vote for Player N' with a real player number other than your own; malformed or self-votes count as abstentions. The player with the most votes is accused; ties are resolved in configured player order. If the accused player is not the Liar, the Liar wins immediately. If the accused player is the Liar, the Liar gets exactly one final word guess: a correct guess wins for the Liar, and an incorrect guess wins for the non-Liars. Winners receive 1.0 reward and losers 0.0. Follow the latest Moderator instruction for the current phase. On a clue turn output only one concise indirect clue, not a vote or a question; on a voting turn output only the vote; on a final guess turn output only the guessed word, with no explanation. Never speak for another player or reveal a private role message.
+The messages always end with the token <EOS>.
+
+Your name is Player 1.
+
+Your role:You are Player 1. Follow the latest Moderator instruction. During voting use: I vote for [Player Name].
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: Liar Game begins with 5 players and exactly one Liar. There will be 2 clue round(s), followed by one vote from each player.<EOS>
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: Topic: Places.<EOS>
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: You are a non-liar. The secret word is Amusement Park. Give indirect clues that show you know the word without making it obvious to the Liar. Do not explicitly say the secret word.<EOS>
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: Round 1/2: Player 1, give one indirect clue about the secret word. Do not explicitly say the word. Be specific enough to show you know it without making it too easy for the Liar to infer.<EOS>
+[assistant / player_27a99f01e114bf92a249aa3e]
+[Player 1]: I think it's a place where people go to enjoy rides and games.<EOS>
+[user / player_4b67834a4c0fa5590d2e36e3]
+[Player 2]: It's a location with ticket gates, roller coasters, and food stands.<EOS>
+[user / player_91de349605a422977a28c81e]
+[Player 3]: It involves a large playground area with themed sections and souvenir shops.<EOS>
+[user / player_811e7a3900f62f1f8432dfc0]
+[Player 4]: It's a destination featuring a Ferris wheel, a carousel, and a midway with carnival games.<EOS>
+[user / player_4fcf2ea2f5a654449f7d41be]
+[Player 5]: It's a place with a distinct entrance fee and multiple amusement areas within a single complex.<EOS>
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: Round 2/2: Player 1, give one indirect clue about the secret word. Do not explicitly say the word. Be specific enough to show you know it without making it too easy for the Liar to infer.<EOS>
+[user / ]
+Now you speak, Player 1.
+[원문 API 응답]
+{
+  "id": "chatcmpl-98c9256dac7514ea",
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "logprobs": null,
+      "message": {
+        "content": "I think it's a place where families spend the day on exciting rides and watching shows.",
+        "refusal": null,
+        "role": "assistant",
+        "annotations": null,
+        "audio": null,
+        "function_call": null,
+        "tool_calls": [],
+        "reasoning": null
+      },
+      "stop_reason": null,
+      "token_ids": null,
+      "routed_experts": null
+    }
+  ],
+  "created": 1791342692,
+  "model": "Qwen/Qwen3.5-9B",
+  "object": "chat.completion",
+  "moderation": null,
+  "service_tier": null,
+  "system_fingerprint": "vllm-0.22.0-346972fe",
+  "usage": {
+    "completion_tokens": 19,
+    "prompt_tokens": 869,
+    "total_tokens": 888,
+    "completion_tokens_details": null,
+    "prompt_tokens_details": null
+  },
+  "prompt_logprobs": null,
+  "prompt_token_ids": null,
+  "prompt_text": null,
+  "kv_transfer_params": null
+}
+
+=== API call 7 | clue ===
+[system / ]
+You are a helpful assistant.
+You are playing Liar Game. There is exactly one Liar. At the start of each game, the Moderator privately tells each player their role. Every non-Liar receives the same secret word; the Liar does not receive it. Depending on the game setting, the topic may be announced to everyone or hidden from everyone. Do not assume the topic is known unless the Moderator announces it. Each player gives one indirect clue per round in fixed player order, for the number of rounds announced by the Moderator; all clues are public. There are no question-and-answer turns. Non-Liars aim to identify the Liar in the final vote and prevent the Liar from guessing the secret word. A non-Liar should give a clue specific enough to convince other informed players, but must not say the secret word or make it too easy for the Liar to infer. The Liar aims to avoid being identified; if identified, the Liar can still win by correctly guessing the secret word. As the Liar, infer the word from public clues and give a plausible indirect clue without admitting you do not know it. After all clue rounds, every player votes once for one other player as the Liar. When voting, output only 'I vote for Player N' with a real player number other than your own; malformed or self-votes count as abstentions. The player with the most votes is accused; ties are resolved in configured player order. If the accused player is not the Liar, the Liar wins immediately. If the accused player is the Liar, the Liar gets exactly one final word guess: a correct guess wins for the Liar, and an incorrect guess wins for the non-Liars. Winners receive 1.0 reward and losers 0.0. Follow the latest Moderator instruction for the current phase. On a clue turn output only one concise indirect clue, not a vote or a question; on a voting turn output only the vote; on a final guess turn output only the guessed word, with no explanation. Never speak for another player or reveal a private role message.
+The messages always end with the token <EOS>.
+
+Your name is Player 2.
+
+Your role:You are Player 2. Follow the latest Moderator instruction. During voting use: I vote for [Player Name].
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: Liar Game begins with 5 players and exactly one Liar. There will be 2 clue round(s), followed by one vote from each player.<EOS>
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: Topic: Places.<EOS>
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: You are a non-liar. The secret word is Amusement Park. Give indirect clues that show you know the word without making it obvious to the Liar. Do not explicitly say the secret word.<EOS>
+[user / player_27a99f01e114bf92a249aa3e]
+[Player 1]: I think it's a place where people go to enjoy rides and games.<EOS>
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: Round 1/2: Player 2, give one indirect clue about the secret word. Do not explicitly say the word. Be specific enough to show you know it without making it too easy for the Liar to infer.<EOS>
+[assistant / player_4b67834a4c0fa5590d2e36e3]
+[Player 2]: It's a location with ticket gates, roller coasters, and food stands.<EOS>
+[user / player_91de349605a422977a28c81e]
+[Player 3]: It involves a large playground area with themed sections and souvenir shops.<EOS>
+[user / player_811e7a3900f62f1f8432dfc0]
+[Player 4]: It's a destination featuring a Ferris wheel, a carousel, and a midway with carnival games.<EOS>
+[user / player_4fcf2ea2f5a654449f7d41be]
+[Player 5]: It's a place with a distinct entrance fee and multiple amusement areas within a single complex.<EOS>
+[user / player_27a99f01e114bf92a249aa3e]
+[Player 1]: I think it's a place where families spend the day on exciting rides and watching shows.<EOS>
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: Round 2/2: Player 2, give one indirect clue about the secret word. Do not explicitly say the word. Be specific enough to show you know it without making it too easy for the Liar to infer.<EOS>
+[user / ]
+Now you speak, Player 2.
+[원문 API 응답]
+{
+  "id": "chatcmpl-b100327df34be30b",
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "logprobs": null,
+      "message": {
+        "content": "It's a venue where you can ride a Ferris wheel to see the whole area from above.",
+        "refusal": null,
+        "role": "assistant",
+        "annotations": null,
+        "audio": null,
+        "function_call": null,
+        "tool_calls": [],
+        "reasoning": null
+      },
+      "stop_reason": null,
+      "token_ids": null,
+      "routed_experts": null
+    }
+  ],
+  "created": 1791342693,
+  "model": "Qwen/Qwen3.5-9B",
+  "object": "chat.completion",
+  "moderation": null,
+  "service_tier": null,
+  "system_fingerprint": "vllm-0.22.0-346972fe",
+  "usage": {
+    "completion_tokens": 21,
+    "prompt_tokens": 899,
+    "total_tokens": 920,
+    "completion_tokens_details": null,
+    "prompt_tokens_details": null
+  },
+  "prompt_logprobs": null,
+  "prompt_token_ids": null,
+  "prompt_text": null,
+  "kv_transfer_params": null
+}
+
+=== API call 8 | clue ===
+[system / ]
+You are a helpful assistant.
+You are playing Liar Game. There is exactly one Liar. At the start of each game, the Moderator privately tells each player their role. Every non-Liar receives the same secret word; the Liar does not receive it. Depending on the game setting, the topic may be announced to everyone or hidden from everyone. Do not assume the topic is known unless the Moderator announces it. Each player gives one indirect clue per round in fixed player order, for the number of rounds announced by the Moderator; all clues are public. There are no question-and-answer turns. Non-Liars aim to identify the Liar in the final vote and prevent the Liar from guessing the secret word. A non-Liar should give a clue specific enough to convince other informed players, but must not say the secret word or make it too easy for the Liar to infer. The Liar aims to avoid being identified; if identified, the Liar can still win by correctly guessing the secret word. As the Liar, infer the word from public clues and give a plausible indirect clue without admitting you do not know it. After all clue rounds, every player votes once for one other player as the Liar. When voting, output only 'I vote for Player N' with a real player number other than your own; malformed or self-votes count as abstentions. The player with the most votes is accused; ties are resolved in configured player order. If the accused player is not the Liar, the Liar wins immediately. If the accused player is the Liar, the Liar gets exactly one final word guess: a correct guess wins for the Liar, and an incorrect guess wins for the non-Liars. Winners receive 1.0 reward and losers 0.0. Follow the latest Moderator instruction for the current phase. On a clue turn output only one concise indirect clue, not a vote or a question; on a voting turn output only the vote; on a final guess turn output only the guessed word, with no explanation. Never speak for another player or reveal a private role message.
+The messages always end with the token <EOS>.
+
+Your name is Player 3.
+
+Your role:You are Player 3. Follow the latest Moderator instruction. During voting use: I vote for [Player Name].
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: Liar Game begins with 5 players and exactly one Liar. There will be 2 clue round(s), followed by one vote from each player.<EOS>
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: Topic: Places.<EOS>
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: You are a non-liar. The secret word is Amusement Park. Give indirect clues that show you know the word without making it obvious to the Liar. Do not explicitly say the secret word.<EOS>
+[user / player_27a99f01e114bf92a249aa3e]
+[Player 1]: I think it's a place where people go to enjoy rides and games.<EOS>
+[user / player_4b67834a4c0fa5590d2e36e3]
+[Player 2]: It's a location with ticket gates, roller coasters, and food stands.<EOS>
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: Round 1/2: Player 3, give one indirect clue about the secret word. Do not explicitly say the word. Be specific enough to show you know it without making it too easy for the Liar to infer.<EOS>
+[assistant / player_91de349605a422977a28c81e]
+[Player 3]: It involves a large playground area with themed sections and souvenir shops.<EOS>
+[user / player_811e7a3900f62f1f8432dfc0]
+[Player 4]: It's a destination featuring a Ferris wheel, a carousel, and a midway with carnival games.<EOS>
+[user / player_4fcf2ea2f5a654449f7d41be]
+[Player 5]: It's a place with a distinct entrance fee and multiple amusement areas within a single complex.<EOS>
+[user / player_27a99f01e114bf92a249aa3e]
+[Player 1]: I think it's a place where families spend the day on exciting rides and watching shows.<EOS>
+[user / player_4b67834a4c0fa5590d2e36e3]
+[Player 2]: It's a venue where you can ride a Ferris wheel to see the whole area from above.<EOS>
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: Round 2/2: Player 3, give one indirect clue about the secret word. Do not explicitly say the word. Be specific enough to show you know it without making it too easy for the Liar to infer.<EOS>
+[user / ]
+Now you speak, Player 3.
+[원문 API 응답]
+{
+  "id": "chatcmpl-ae934a3c5d69ee18",
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "logprobs": null,
+      "message": {
+        "content": "It's often a popular spot for birthday parties and has a dedicated area for children's games.",
+        "refusal": null,
+        "role": "assistant",
+        "annotations": null,
+        "audio": null,
+        "function_call": null,
+        "tool_calls": [],
+        "reasoning": null
+      },
+      "stop_reason": null,
+      "token_ids": null,
+      "routed_experts": null
+    }
+  ],
+  "created": 1791342693,
+  "model": "Qwen/Qwen3.5-9B",
+  "object": "chat.completion",
+  "moderation": null,
+  "service_tier": null,
+  "system_fingerprint": "vllm-0.22.0-346972fe",
+  "usage": {
+    "completion_tokens": 20,
+    "prompt_tokens": 931,
+    "total_tokens": 951,
+    "completion_tokens_details": null,
+    "prompt_tokens_details": null
+  },
+  "prompt_logprobs": null,
+  "prompt_token_ids": null,
+  "prompt_text": null,
+  "kv_transfer_params": null
+}
+
+=== API call 9 | clue ===
+[system / ]
+You are a helpful assistant.
+You are playing Liar Game. There is exactly one Liar. At the start of each game, the Moderator privately tells each player their role. Every non-Liar receives the same secret word; the Liar does not receive it. Depending on the game setting, the topic may be announced to everyone or hidden from everyone. Do not assume the topic is known unless the Moderator announces it. Each player gives one indirect clue per round in fixed player order, for the number of rounds announced by the Moderator; all clues are public. There are no question-and-answer turns. Non-Liars aim to identify the Liar in the final vote and prevent the Liar from guessing the secret word. A non-Liar should give a clue specific enough to convince other informed players, but must not say the secret word or make it too easy for the Liar to infer. The Liar aims to avoid being identified; if identified, the Liar can still win by correctly guessing the secret word. As the Liar, infer the word from public clues and give a plausible indirect clue without admitting you do not know it. After all clue rounds, every player votes once for one other player as the Liar. When voting, output only 'I vote for Player N' with a real player number other than your own; malformed or self-votes count as abstentions. The player with the most votes is accused; ties are resolved in configured player order. If the accused player is not the Liar, the Liar wins immediately. If the accused player is the Liar, the Liar gets exactly one final word guess: a correct guess wins for the Liar, and an incorrect guess wins for the non-Liars. Winners receive 1.0 reward and losers 0.0. Follow the latest Moderator instruction for the current phase. On a clue turn output only one concise indirect clue, not a vote or a question; on a voting turn output only the vote; on a final guess turn output only the guessed word, with no explanation. Never speak for another player or reveal a private role message.
+The messages always end with the token <EOS>.
+
+Your name is Player 4.
+
+Your role:You are Player 4. Follow the latest Moderator instruction. During voting use: I vote for [Player Name].
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: Liar Game begins with 5 players and exactly one Liar. There will be 2 clue round(s), followed by one vote from each player.<EOS>
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: Topic: Places.<EOS>
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: You are a non-liar. The secret word is Amusement Park. Give indirect clues that show you know the word without making it obvious to the Liar. Do not explicitly say the secret word.<EOS>
+[user / player_27a99f01e114bf92a249aa3e]
+[Player 1]: I think it's a place where people go to enjoy rides and games.<EOS>
+[user / player_4b67834a4c0fa5590d2e36e3]
+[Player 2]: It's a location with ticket gates, roller coasters, and food stands.<EOS>
+[user / player_91de349605a422977a28c81e]
+[Player 3]: It involves a large playground area with themed sections and souvenir shops.<EOS>
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: Round 1/2: Player 4, give one indirect clue about the secret word. Do not explicitly say the word. Be specific enough to show you know it without making it too easy for the Liar to infer.<EOS>
+[assistant / player_811e7a3900f62f1f8432dfc0]
+[Player 4]: It's a destination featuring a Ferris wheel, a carousel, and a midway with carnival games.<EOS>
+[user / player_4fcf2ea2f5a654449f7d41be]
+[Player 5]: It's a place with a distinct entrance fee and multiple amusement areas within a single complex.<EOS>
+[user / player_27a99f01e114bf92a249aa3e]
+[Player 1]: I think it's a place where families spend the day on exciting rides and watching shows.<EOS>
+[user / player_4b67834a4c0fa5590d2e36e3]
+[Player 2]: It's a venue where you can ride a Ferris wheel to see the whole area from above.<EOS>
+[user / player_91de349605a422977a28c81e]
+[Player 3]: It's often a popular spot for birthday parties and has a dedicated area for children's games.<EOS>
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: Round 2/2: Player 4, give one indirect clue about the secret word. Do not explicitly say the word. Be specific enough to show you know it without making it too easy for the Liar to infer.<EOS>
+[user / ]
+Now you speak, Player 4.
+[원문 API 응답]
+{
+  "id": "chatcmpl-b69ef1675ab230bc",
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "logprobs": null,
+      "message": {
+        "content": "It's a place famous for its midway games where you can win small toys or stuffed animals.",
+        "refusal": null,
+        "role": "assistant",
+        "annotations": null,
+        "audio": null,
+        "function_call": null,
+        "tool_calls": [],
+        "reasoning": null
+      },
+      "stop_reason": null,
+      "token_ids": null,
+      "routed_experts": null
+    }
+  ],
+  "created": 1791342693,
+  "model": "Qwen/Qwen3.5-9B",
+  "object": "chat.completion",
+  "moderation": null,
+  "service_tier": null,
+  "system_fingerprint": "vllm-0.22.0-346972fe",
+  "usage": {
+    "completion_tokens": 20,
+    "prompt_tokens": 962,
+    "total_tokens": 982,
+    "completion_tokens_details": null,
+    "prompt_tokens_details": null
+  },
+  "prompt_logprobs": null,
+  "prompt_token_ids": null,
+  "prompt_text": null,
+  "kv_transfer_params": null
+}
+
+=== API call 10 | clue ===
+[system / ]
+You are a helpful assistant.
+You are playing Liar Game. There is exactly one Liar. At the start of each game, the Moderator privately tells each player their role. Every non-Liar receives the same secret word; the Liar does not receive it. Depending on the game setting, the topic may be announced to everyone or hidden from everyone. Do not assume the topic is known unless the Moderator announces it. Each player gives one indirect clue per round in fixed player order, for the number of rounds announced by the Moderator; all clues are public. There are no question-and-answer turns. Non-Liars aim to identify the Liar in the final vote and prevent the Liar from guessing the secret word. A non-Liar should give a clue specific enough to convince other informed players, but must not say the secret word or make it too easy for the Liar to infer. The Liar aims to avoid being identified; if identified, the Liar can still win by correctly guessing the secret word. As the Liar, infer the word from public clues and give a plausible indirect clue without admitting you do not know it. After all clue rounds, every player votes once for one other player as the Liar. When voting, output only 'I vote for Player N' with a real player number other than your own; malformed or self-votes count as abstentions. The player with the most votes is accused; ties are resolved in configured player order. If the accused player is not the Liar, the Liar wins immediately. If the accused player is the Liar, the Liar gets exactly one final word guess: a correct guess wins for the Liar, and an incorrect guess wins for the non-Liars. Winners receive 1.0 reward and losers 0.0. Follow the latest Moderator instruction for the current phase. On a clue turn output only one concise indirect clue, not a vote or a question; on a voting turn output only the vote; on a final guess turn output only the guessed word, with no explanation. Never speak for another player or reveal a private role message.
+The messages always end with the token <EOS>.
+
+Your name is Player 5.
+
+Your role:You are Player 5. Follow the latest Moderator instruction. During voting use: I vote for [Player Name].
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: Liar Game begins with 5 players and exactly one Liar. There will be 2 clue round(s), followed by one vote from each player.<EOS>
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: Topic: Places.<EOS>
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: You are the Liar. You do not know the secret word. Infer it from others' clues while blending in. Give a plausible clue on your turn.<EOS>
+[user / player_27a99f01e114bf92a249aa3e]
+[Player 1]: I think it's a place where people go to enjoy rides and games.<EOS>
+[user / player_4b67834a4c0fa5590d2e36e3]
+[Player 2]: It's a location with ticket gates, roller coasters, and food stands.<EOS>
+[user / player_91de349605a422977a28c81e]
+[Player 3]: It involves a large playground area with themed sections and souvenir shops.<EOS>
+[user / player_811e7a3900f62f1f8432dfc0]
+[Player 4]: It's a destination featuring a Ferris wheel, a carousel, and a midway with carnival games.<EOS>
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: Round 1/2: Player 5, give one indirect clue about the secret word. Do not explicitly say the word. Be specific enough to show you know it without making it too easy for the Liar to infer.<EOS>
+[assistant / player_4fcf2ea2f5a654449f7d41be]
+[Player 5]: It's a place with a distinct entrance fee and multiple amusement areas within a single complex.<EOS>
+[user / player_27a99f01e114bf92a249aa3e]
+[Player 1]: I think it's a place where families spend the day on exciting rides and watching shows.<EOS>
+[user / player_4b67834a4c0fa5590d2e36e3]
+[Player 2]: It's a venue where you can ride a Ferris wheel to see the whole area from above.<EOS>
+[user / player_91de349605a422977a28c81e]
+[Player 3]: It's often a popular spot for birthday parties and has a dedicated area for children's games.<EOS>
+[user / player_811e7a3900f62f1f8432dfc0]
+[Player 4]: It's a place famous for its midway games where you can win small toys or stuffed animals.<EOS>
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: Round 2/2: Player 5, give one indirect clue about the secret word. Do not explicitly say the word. Be specific enough to show you know it without making it too easy for the Liar to infer.<EOS>
+[user / ]
+Now you speak, Player 5.
+[원문 API 응답]
+{
+  "id": "chatcmpl-8fb1d586c4720333",
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "logprobs": null,
+      "message": {
+        "content": "It's a venue where the thrill of dropping in a capsule ride is a defining feature alongside the carnival games.",
+        "refusal": null,
+        "role": "assistant",
+        "annotations": null,
+        "audio": null,
+        "function_call": null,
+        "tool_calls": [],
+        "reasoning": null
+      },
+      "stop_reason": null,
+      "token_ids": null,
+      "routed_experts": null
+    }
+  ],
+  "created": 1791342694,
+  "model": "Qwen/Qwen3.5-9B",
+  "object": "chat.completion",
+  "moderation": null,
+  "service_tier": null,
+  "system_fingerprint": "vllm-0.22.0-346972fe",
+  "usage": {
+    "completion_tokens": 23,
+    "prompt_tokens": 984,
+    "total_tokens": 1007,
+    "completion_tokens_details": null,
+    "prompt_tokens_details": null
+  },
+  "prompt_logprobs": null,
+  "prompt_token_ids": null,
+  "prompt_text": null,
+  "kv_transfer_params": null
+}
+
+=== API call 11 | vote ===
+[system / ]
+You are a helpful assistant.
+You are playing Liar Game. There is exactly one Liar. At the start of each game, the Moderator privately tells each player their role. Every non-Liar receives the same secret word; the Liar does not receive it. Depending on the game setting, the topic may be announced to everyone or hidden from everyone. Do not assume the topic is known unless the Moderator announces it. Each player gives one indirect clue per round in fixed player order, for the number of rounds announced by the Moderator; all clues are public. There are no question-and-answer turns. Non-Liars aim to identify the Liar in the final vote and prevent the Liar from guessing the secret word. A non-Liar should give a clue specific enough to convince other informed players, but must not say the secret word or make it too easy for the Liar to infer. The Liar aims to avoid being identified; if identified, the Liar can still win by correctly guessing the secret word. As the Liar, infer the word from public clues and give a plausible indirect clue without admitting you do not know it. After all clue rounds, every player votes once for one other player as the Liar. When voting, output only 'I vote for Player N' with a real player number other than your own; malformed or self-votes count as abstentions. The player with the most votes is accused; ties are resolved in configured player order. If the accused player is not the Liar, the Liar wins immediately. If the accused player is the Liar, the Liar gets exactly one final word guess: a correct guess wins for the Liar, and an incorrect guess wins for the non-Liars. Winners receive 1.0 reward and losers 0.0. Follow the latest Moderator instruction for the current phase. On a clue turn output only one concise indirect clue, not a vote or a question; on a voting turn output only the vote; on a final guess turn output only the guessed word, with no explanation. Never speak for another player or reveal a private role message.
+The messages always end with the token <EOS>.
+
+Your name is Player 1.
+
+Your role:You are Player 1. Follow the latest Moderator instruction. During voting use: I vote for [Player Name].
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: Liar Game begins with 5 players and exactly one Liar. There will be 2 clue round(s), followed by one vote from each player.<EOS>
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: Topic: Places.<EOS>
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: You are a non-liar. The secret word is Amusement Park. Give indirect clues that show you know the word without making it obvious to the Liar. Do not explicitly say the secret word.<EOS>
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: Round 1/2: Player 1, give one indirect clue about the secret word. Do not explicitly say the word. Be specific enough to show you know it without making it too easy for the Liar to infer.<EOS>
+[assistant / player_27a99f01e114bf92a249aa3e]
+[Player 1]: I think it's a place where people go to enjoy rides and games.<EOS>
+[user / player_4b67834a4c0fa5590d2e36e3]
+[Player 2]: It's a location with ticket gates, roller coasters, and food stands.<EOS>
+[user / player_91de349605a422977a28c81e]
+[Player 3]: It involves a large playground area with themed sections and souvenir shops.<EOS>
+[user / player_811e7a3900f62f1f8432dfc0]
+[Player 4]: It's a destination featuring a Ferris wheel, a carousel, and a midway with carnival games.<EOS>
+[user / player_4fcf2ea2f5a654449f7d41be]
+[Player 5]: It's a place with a distinct entrance fee and multiple amusement areas within a single complex.<EOS>
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: Round 2/2: Player 1, give one indirect clue about the secret word. Do not explicitly say the word. Be specific enough to show you know it without making it too easy for the Liar to infer.<EOS>
+[assistant / player_27a99f01e114bf92a249aa3e]
+[Player 1]: I think it's a place where families spend the day on exciting rides and watching shows.<EOS>
+[user / player_4b67834a4c0fa5590d2e36e3]
+[Player 2]: It's a venue where you can ride a Ferris wheel to see the whole area from above.<EOS>
+[user / player_91de349605a422977a28c81e]
+[Player 3]: It's often a popular spot for birthday parties and has a dedicated area for children's games.<EOS>
+[user / player_811e7a3900f62f1f8432dfc0]
+[Player 4]: It's a place famous for its midway games where you can win small toys or stuffed animals.<EOS>
+[user / player_4fcf2ea2f5a654449f7d41be]
+[Player 5]: It's a venue where the thrill of dropping in a capsule ride is a defining feature alongside the carnival games.<EOS>
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: Clues are complete. All players vote privately now.<EOS>
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: Player 1, vote privately for one other player as the Liar using: 'I vote for [Player Name]'. Malformed or self-votes count as abstentions.<EOS>
+[user / ]
+Now you speak, Player 1.
+[원문 API 응답]
+{
+  "id": "chatcmpl-8664f8cb17daf1da",
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "logprobs": null,
+      "message": {
+        "content": "I vote for Player 5",
+        "refusal": null,
+        "role": "assistant",
+        "annotations": null,
+        "audio": null,
+        "function_call": null,
+        "tool_calls": [],
+        "reasoning": null
+      },
+      "stop_reason": null,
+      "token_ids": null,
+      "routed_experts": null
+    }
+  ],
+  "created": 1791342694,
+  "model": "Qwen/Qwen3.5-9B",
+  "object": "chat.completion",
+  "moderation": null,
+  "service_tier": null,
+  "system_fingerprint": "vllm-0.22.0-346972fe",
+  "usage": {
+    "completion_tokens": 7,
+    "prompt_tokens": 1096,
+    "total_tokens": 1103,
+    "completion_tokens_details": null,
+    "prompt_tokens_details": null
+  },
+  "prompt_logprobs": null,
+  "prompt_token_ids": null,
+  "prompt_text": null,
+  "kv_transfer_params": null
+}
+
+=== API call 12 | vote ===
+[system / ]
+You are a helpful assistant.
+You are playing Liar Game. There is exactly one Liar. At the start of each game, the Moderator privately tells each player their role. Every non-Liar receives the same secret word; the Liar does not receive it. Depending on the game setting, the topic may be announced to everyone or hidden from everyone. Do not assume the topic is known unless the Moderator announces it. Each player gives one indirect clue per round in fixed player order, for the number of rounds announced by the Moderator; all clues are public. There are no question-and-answer turns. Non-Liars aim to identify the Liar in the final vote and prevent the Liar from guessing the secret word. A non-Liar should give a clue specific enough to convince other informed players, but must not say the secret word or make it too easy for the Liar to infer. The Liar aims to avoid being identified; if identified, the Liar can still win by correctly guessing the secret word. As the Liar, infer the word from public clues and give a plausible indirect clue without admitting you do not know it. After all clue rounds, every player votes once for one other player as the Liar. When voting, output only 'I vote for Player N' with a real player number other than your own; malformed or self-votes count as abstentions. The player with the most votes is accused; ties are resolved in configured player order. If the accused player is not the Liar, the Liar wins immediately. If the accused player is the Liar, the Liar gets exactly one final word guess: a correct guess wins for the Liar, and an incorrect guess wins for the non-Liars. Winners receive 1.0 reward and losers 0.0. Follow the latest Moderator instruction for the current phase. On a clue turn output only one concise indirect clue, not a vote or a question; on a voting turn output only the vote; on a final guess turn output only the guessed word, with no explanation. Never speak for another player or reveal a private role message.
+The messages always end with the token <EOS>.
+
+Your name is Player 2.
+
+Your role:You are Player 2. Follow the latest Moderator instruction. During voting use: I vote for [Player Name].
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: Liar Game begins with 5 players and exactly one Liar. There will be 2 clue round(s), followed by one vote from each player.<EOS>
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: Topic: Places.<EOS>
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: You are a non-liar. The secret word is Amusement Park. Give indirect clues that show you know the word without making it obvious to the Liar. Do not explicitly say the secret word.<EOS>
+[user / player_27a99f01e114bf92a249aa3e]
+[Player 1]: I think it's a place where people go to enjoy rides and games.<EOS>
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: Round 1/2: Player 2, give one indirect clue about the secret word. Do not explicitly say the word. Be specific enough to show you know it without making it too easy for the Liar to infer.<EOS>
+[assistant / player_4b67834a4c0fa5590d2e36e3]
+[Player 2]: It's a location with ticket gates, roller coasters, and food stands.<EOS>
+[user / player_91de349605a422977a28c81e]
+[Player 3]: It involves a large playground area with themed sections and souvenir shops.<EOS>
+[user / player_811e7a3900f62f1f8432dfc0]
+[Player 4]: It's a destination featuring a Ferris wheel, a carousel, and a midway with carnival games.<EOS>
+[user / player_4fcf2ea2f5a654449f7d41be]
+[Player 5]: It's a place with a distinct entrance fee and multiple amusement areas within a single complex.<EOS>
+[user / player_27a99f01e114bf92a249aa3e]
+[Player 1]: I think it's a place where families spend the day on exciting rides and watching shows.<EOS>
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: Round 2/2: Player 2, give one indirect clue about the secret word. Do not explicitly say the word. Be specific enough to show you know it without making it too easy for the Liar to infer.<EOS>
+[assistant / player_4b67834a4c0fa5590d2e36e3]
+[Player 2]: It's a venue where you can ride a Ferris wheel to see the whole area from above.<EOS>
+[user / player_91de349605a422977a28c81e]
+[Player 3]: It's often a popular spot for birthday parties and has a dedicated area for children's games.<EOS>
+[user / player_811e7a3900f62f1f8432dfc0]
+[Player 4]: It's a place famous for its midway games where you can win small toys or stuffed animals.<EOS>
+[user / player_4fcf2ea2f5a654449f7d41be]
+[Player 5]: It's a venue where the thrill of dropping in a capsule ride is a defining feature alongside the carnival games.<EOS>
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: Clues are complete. All players vote privately now.<EOS>
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: Player 2, vote privately for one other player as the Liar using: 'I vote for [Player Name]'. Malformed or self-votes count as abstentions.<EOS>
+[user / ]
+Now you speak, Player 2.
+[원문 API 응답]
+{
+  "id": "chatcmpl-a9659ecd50ad8721",
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "logprobs": null,
+      "message": {
+        "content": "I vote for Player 5",
+        "refusal": null,
+        "role": "assistant",
+        "annotations": null,
+        "audio": null,
+        "function_call": null,
+        "tool_calls": [],
+        "reasoning": null
+      },
+      "stop_reason": null,
+      "token_ids": null,
+      "routed_experts": null
+    }
+  ],
+  "created": 1791342694,
+  "model": "Qwen/Qwen3.5-9B",
+  "object": "chat.completion",
+  "moderation": null,
+  "service_tier": null,
+  "system_fingerprint": "vllm-0.22.0-346972fe",
+  "usage": {
+    "completion_tokens": 7,
+    "prompt_tokens": 1096,
+    "total_tokens": 1103,
+    "completion_tokens_details": null,
+    "prompt_tokens_details": null
+  },
+  "prompt_logprobs": null,
+  "prompt_token_ids": null,
+  "prompt_text": null,
+  "kv_transfer_params": null
+}
+
+=== API call 13 | vote ===
+[system / ]
+You are a helpful assistant.
+You are playing Liar Game. There is exactly one Liar. At the start of each game, the Moderator privately tells each player their role. Every non-Liar receives the same secret word; the Liar does not receive it. Depending on the game setting, the topic may be announced to everyone or hidden from everyone. Do not assume the topic is known unless the Moderator announces it. Each player gives one indirect clue per round in fixed player order, for the number of rounds announced by the Moderator; all clues are public. There are no question-and-answer turns. Non-Liars aim to identify the Liar in the final vote and prevent the Liar from guessing the secret word. A non-Liar should give a clue specific enough to convince other informed players, but must not say the secret word or make it too easy for the Liar to infer. The Liar aims to avoid being identified; if identified, the Liar can still win by correctly guessing the secret word. As the Liar, infer the word from public clues and give a plausible indirect clue without admitting you do not know it. After all clue rounds, every player votes once for one other player as the Liar. When voting, output only 'I vote for Player N' with a real player number other than your own; malformed or self-votes count as abstentions. The player with the most votes is accused; ties are resolved in configured player order. If the accused player is not the Liar, the Liar wins immediately. If the accused player is the Liar, the Liar gets exactly one final word guess: a correct guess wins for the Liar, and an incorrect guess wins for the non-Liars. Winners receive 1.0 reward and losers 0.0. Follow the latest Moderator instruction for the current phase. On a clue turn output only one concise indirect clue, not a vote or a question; on a voting turn output only the vote; on a final guess turn output only the guessed word, with no explanation. Never speak for another player or reveal a private role message.
+The messages always end with the token <EOS>.
+
+Your name is Player 3.
+
+Your role:You are Player 3. Follow the latest Moderator instruction. During voting use: I vote for [Player Name].
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: Liar Game begins with 5 players and exactly one Liar. There will be 2 clue round(s), followed by one vote from each player.<EOS>
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: Topic: Places.<EOS>
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: You are a non-liar. The secret word is Amusement Park. Give indirect clues that show you know the word without making it obvious to the Liar. Do not explicitly say the secret word.<EOS>
+[user / player_27a99f01e114bf92a249aa3e]
+[Player 1]: I think it's a place where people go to enjoy rides and games.<EOS>
+[user / player_4b67834a4c0fa5590d2e36e3]
+[Player 2]: It's a location with ticket gates, roller coasters, and food stands.<EOS>
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: Round 1/2: Player 3, give one indirect clue about the secret word. Do not explicitly say the word. Be specific enough to show you know it without making it too easy for the Liar to infer.<EOS>
+[assistant / player_91de349605a422977a28c81e]
+[Player 3]: It involves a large playground area with themed sections and souvenir shops.<EOS>
+[user / player_811e7a3900f62f1f8432dfc0]
+[Player 4]: It's a destination featuring a Ferris wheel, a carousel, and a midway with carnival games.<EOS>
+[user / player_4fcf2ea2f5a654449f7d41be]
+[Player 5]: It's a place with a distinct entrance fee and multiple amusement areas within a single complex.<EOS>
+[user / player_27a99f01e114bf92a249aa3e]
+[Player 1]: I think it's a place where families spend the day on exciting rides and watching shows.<EOS>
+[user / player_4b67834a4c0fa5590d2e36e3]
+[Player 2]: It's a venue where you can ride a Ferris wheel to see the whole area from above.<EOS>
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: Round 2/2: Player 3, give one indirect clue about the secret word. Do not explicitly say the word. Be specific enough to show you know it without making it too easy for the Liar to infer.<EOS>
+[assistant / player_91de349605a422977a28c81e]
+[Player 3]: It's often a popular spot for birthday parties and has a dedicated area for children's games.<EOS>
+[user / player_811e7a3900f62f1f8432dfc0]
+[Player 4]: It's a place famous for its midway games where you can win small toys or stuffed animals.<EOS>
+[user / player_4fcf2ea2f5a654449f7d41be]
+[Player 5]: It's a venue where the thrill of dropping in a capsule ride is a defining feature alongside the carnival games.<EOS>
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: Clues are complete. All players vote privately now.<EOS>
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: Player 3, vote privately for one other player as the Liar using: 'I vote for [Player Name]'. Malformed or self-votes count as abstentions.<EOS>
+[user / ]
+Now you speak, Player 3.
+[원문 API 응답]
+{
+  "id": "chatcmpl-bb4e95244fc9665d",
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "logprobs": null,
+      "message": {
+        "content": "I vote for Player 5",
+        "refusal": null,
+        "role": "assistant",
+        "annotations": null,
+        "audio": null,
+        "function_call": null,
+        "tool_calls": [],
+        "reasoning": null
+      },
+      "stop_reason": null,
+      "token_ids": null,
+      "routed_experts": null
+    }
+  ],
+  "created": 1791342694,
+  "model": "Qwen/Qwen3.5-9B",
+  "object": "chat.completion",
+  "moderation": null,
+  "service_tier": null,
+  "system_fingerprint": "vllm-0.22.0-346972fe",
+  "usage": {
+    "completion_tokens": 7,
+    "prompt_tokens": 1096,
+    "total_tokens": 1103,
+    "completion_tokens_details": null,
+    "prompt_tokens_details": null
+  },
+  "prompt_logprobs": null,
+  "prompt_token_ids": null,
+  "prompt_text": null,
+  "kv_transfer_params": null
+}
+
+=== API call 14 | vote ===
+[system / ]
+You are a helpful assistant.
+You are playing Liar Game. There is exactly one Liar. At the start of each game, the Moderator privately tells each player their role. Every non-Liar receives the same secret word; the Liar does not receive it. Depending on the game setting, the topic may be announced to everyone or hidden from everyone. Do not assume the topic is known unless the Moderator announces it. Each player gives one indirect clue per round in fixed player order, for the number of rounds announced by the Moderator; all clues are public. There are no question-and-answer turns. Non-Liars aim to identify the Liar in the final vote and prevent the Liar from guessing the secret word. A non-Liar should give a clue specific enough to convince other informed players, but must not say the secret word or make it too easy for the Liar to infer. The Liar aims to avoid being identified; if identified, the Liar can still win by correctly guessing the secret word. As the Liar, infer the word from public clues and give a plausible indirect clue without admitting you do not know it. After all clue rounds, every player votes once for one other player as the Liar. When voting, output only 'I vote for Player N' with a real player number other than your own; malformed or self-votes count as abstentions. The player with the most votes is accused; ties are resolved in configured player order. If the accused player is not the Liar, the Liar wins immediately. If the accused player is the Liar, the Liar gets exactly one final word guess: a correct guess wins for the Liar, and an incorrect guess wins for the non-Liars. Winners receive 1.0 reward and losers 0.0. Follow the latest Moderator instruction for the current phase. On a clue turn output only one concise indirect clue, not a vote or a question; on a voting turn output only the vote; on a final guess turn output only the guessed word, with no explanation. Never speak for another player or reveal a private role message.
+The messages always end with the token <EOS>.
+
+Your name is Player 4.
+
+Your role:You are Player 4. Follow the latest Moderator instruction. During voting use: I vote for [Player Name].
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: Liar Game begins with 5 players and exactly one Liar. There will be 2 clue round(s), followed by one vote from each player.<EOS>
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: Topic: Places.<EOS>
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: You are a non-liar. The secret word is Amusement Park. Give indirect clues that show you know the word without making it obvious to the Liar. Do not explicitly say the secret word.<EOS>
+[user / player_27a99f01e114bf92a249aa3e]
+[Player 1]: I think it's a place where people go to enjoy rides and games.<EOS>
+[user / player_4b67834a4c0fa5590d2e36e3]
+[Player 2]: It's a location with ticket gates, roller coasters, and food stands.<EOS>
+[user / player_91de349605a422977a28c81e]
+[Player 3]: It involves a large playground area with themed sections and souvenir shops.<EOS>
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: Round 1/2: Player 4, give one indirect clue about the secret word. Do not explicitly say the word. Be specific enough to show you know it without making it too easy for the Liar to infer.<EOS>
+[assistant / player_811e7a3900f62f1f8432dfc0]
+[Player 4]: It's a destination featuring a Ferris wheel, a carousel, and a midway with carnival games.<EOS>
+[user / player_4fcf2ea2f5a654449f7d41be]
+[Player 5]: It's a place with a distinct entrance fee and multiple amusement areas within a single complex.<EOS>
+[user / player_27a99f01e114bf92a249aa3e]
+[Player 1]: I think it's a place where families spend the day on exciting rides and watching shows.<EOS>
+[user / player_4b67834a4c0fa5590d2e36e3]
+[Player 2]: It's a venue where you can ride a Ferris wheel to see the whole area from above.<EOS>
+[user / player_91de349605a422977a28c81e]
+[Player 3]: It's often a popular spot for birthday parties and has a dedicated area for children's games.<EOS>
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: Round 2/2: Player 4, give one indirect clue about the secret word. Do not explicitly say the word. Be specific enough to show you know it without making it too easy for the Liar to infer.<EOS>
+[assistant / player_811e7a3900f62f1f8432dfc0]
+[Player 4]: It's a place famous for its midway games where you can win small toys or stuffed animals.<EOS>
+[user / player_4fcf2ea2f5a654449f7d41be]
+[Player 5]: It's a venue where the thrill of dropping in a capsule ride is a defining feature alongside the carnival games.<EOS>
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: Clues are complete. All players vote privately now.<EOS>
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: Player 4, vote privately for one other player as the Liar using: 'I vote for [Player Name]'. Malformed or self-votes count as abstentions.<EOS>
+[user / ]
+Now you speak, Player 4.
+[원문 API 응답]
+{
+  "id": "chatcmpl-982a391283a298fb",
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "logprobs": null,
+      "message": {
+        "content": "I vote for Player 5",
+        "refusal": null,
+        "role": "assistant",
+        "annotations": null,
+        "audio": null,
+        "function_call": null,
+        "tool_calls": [],
+        "reasoning": null
+      },
+      "stop_reason": null,
+      "token_ids": null,
+      "routed_experts": null
+    }
+  ],
+  "created": 1791342695,
+  "model": "Qwen/Qwen3.5-9B",
+  "object": "chat.completion",
+  "moderation": null,
+  "service_tier": null,
+  "system_fingerprint": "vllm-0.22.0-346972fe",
+  "usage": {
+    "completion_tokens": 7,
+    "prompt_tokens": 1096,
+    "total_tokens": 1103,
+    "completion_tokens_details": null,
+    "prompt_tokens_details": null
+  },
+  "prompt_logprobs": null,
+  "prompt_token_ids": null,
+  "prompt_text": null,
+  "kv_transfer_params": null
+}
+
+=== API call 15 | vote ===
+[system / ]
+You are a helpful assistant.
+You are playing Liar Game. There is exactly one Liar. At the start of each game, the Moderator privately tells each player their role. Every non-Liar receives the same secret word; the Liar does not receive it. Depending on the game setting, the topic may be announced to everyone or hidden from everyone. Do not assume the topic is known unless the Moderator announces it. Each player gives one indirect clue per round in fixed player order, for the number of rounds announced by the Moderator; all clues are public. There are no question-and-answer turns. Non-Liars aim to identify the Liar in the final vote and prevent the Liar from guessing the secret word. A non-Liar should give a clue specific enough to convince other informed players, but must not say the secret word or make it too easy for the Liar to infer. The Liar aims to avoid being identified; if identified, the Liar can still win by correctly guessing the secret word. As the Liar, infer the word from public clues and give a plausible indirect clue without admitting you do not know it. After all clue rounds, every player votes once for one other player as the Liar. When voting, output only 'I vote for Player N' with a real player number other than your own; malformed or self-votes count as abstentions. The player with the most votes is accused; ties are resolved in configured player order. If the accused player is not the Liar, the Liar wins immediately. If the accused player is the Liar, the Liar gets exactly one final word guess: a correct guess wins for the Liar, and an incorrect guess wins for the non-Liars. Winners receive 1.0 reward and losers 0.0. Follow the latest Moderator instruction for the current phase. On a clue turn output only one concise indirect clue, not a vote or a question; on a voting turn output only the vote; on a final guess turn output only the guessed word, with no explanation. Never speak for another player or reveal a private role message.
+The messages always end with the token <EOS>.
+
+Your name is Player 5.
+
+Your role:You are Player 5. Follow the latest Moderator instruction. During voting use: I vote for [Player Name].
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: Liar Game begins with 5 players and exactly one Liar. There will be 2 clue round(s), followed by one vote from each player.<EOS>
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: Topic: Places.<EOS>
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: You are the Liar. You do not know the secret word. Infer it from others' clues while blending in. Give a plausible clue on your turn.<EOS>
+[user / player_27a99f01e114bf92a249aa3e]
+[Player 1]: I think it's a place where people go to enjoy rides and games.<EOS>
+[user / player_4b67834a4c0fa5590d2e36e3]
+[Player 2]: It's a location with ticket gates, roller coasters, and food stands.<EOS>
+[user / player_91de349605a422977a28c81e]
+[Player 3]: It involves a large playground area with themed sections and souvenir shops.<EOS>
+[user / player_811e7a3900f62f1f8432dfc0]
+[Player 4]: It's a destination featuring a Ferris wheel, a carousel, and a midway with carnival games.<EOS>
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: Round 1/2: Player 5, give one indirect clue about the secret word. Do not explicitly say the word. Be specific enough to show you know it without making it too easy for the Liar to infer.<EOS>
+[assistant / player_4fcf2ea2f5a654449f7d41be]
+[Player 5]: It's a place with a distinct entrance fee and multiple amusement areas within a single complex.<EOS>
+[user / player_27a99f01e114bf92a249aa3e]
+[Player 1]: I think it's a place where families spend the day on exciting rides and watching shows.<EOS>
+[user / player_4b67834a4c0fa5590d2e36e3]
+[Player 2]: It's a venue where you can ride a Ferris wheel to see the whole area from above.<EOS>
+[user / player_91de349605a422977a28c81e]
+[Player 3]: It's often a popular spot for birthday parties and has a dedicated area for children's games.<EOS>
+[user / player_811e7a3900f62f1f8432dfc0]
+[Player 4]: It's a place famous for its midway games where you can win small toys or stuffed animals.<EOS>
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: Round 2/2: Player 5, give one indirect clue about the secret word. Do not explicitly say the word. Be specific enough to show you know it without making it too easy for the Liar to infer.<EOS>
+[assistant / player_4fcf2ea2f5a654449f7d41be]
+[Player 5]: It's a venue where the thrill of dropping in a capsule ride is a defining feature alongside the carnival games.<EOS>
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: Clues are complete. All players vote privately now.<EOS>
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: Player 5, vote privately for one other player as the Liar using: 'I vote for [Player Name]'. Malformed or self-votes count as abstentions.<EOS>
+[user / ]
+Now you speak, Player 5.
+[원문 API 응답]
+{
+  "id": "chatcmpl-a41ea7bb4f535f12",
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "logprobs": null,
+      "message": {
+        "content": "I vote for Player 4",
+        "refusal": null,
+        "role": "assistant",
+        "annotations": null,
+        "audio": null,
+        "function_call": null,
+        "tool_calls": [],
+        "reasoning": null
+      },
+      "stop_reason": null,
+      "token_ids": null,
+      "routed_experts": null
+    }
+  ],
+  "created": 1791342695,
+  "model": "Qwen/Qwen3.5-9B",
+  "object": "chat.completion",
+  "moderation": null,
+  "service_tier": null,
+  "system_fingerprint": "vllm-0.22.0-346972fe",
+  "usage": {
+    "completion_tokens": 7,
+    "prompt_tokens": 1087,
+    "total_tokens": 1094,
+    "completion_tokens_details": null,
+    "prompt_tokens_details": null
+  },
+  "prompt_logprobs": null,
+  "prompt_token_ids": null,
+  "prompt_text": null,
+  "kv_transfer_params": null
+}
+
+=== API call 16 | liar_guess ===
+[system / ]
+You are a helpful assistant.
+You are playing Liar Game. There is exactly one Liar. At the start of each game, the Moderator privately tells each player their role. Every non-Liar receives the same secret word; the Liar does not receive it. Depending on the game setting, the topic may be announced to everyone or hidden from everyone. Do not assume the topic is known unless the Moderator announces it. Each player gives one indirect clue per round in fixed player order, for the number of rounds announced by the Moderator; all clues are public. There are no question-and-answer turns. Non-Liars aim to identify the Liar in the final vote and prevent the Liar from guessing the secret word. A non-Liar should give a clue specific enough to convince other informed players, but must not say the secret word or make it too easy for the Liar to infer. The Liar aims to avoid being identified; if identified, the Liar can still win by correctly guessing the secret word. As the Liar, infer the word from public clues and give a plausible indirect clue without admitting you do not know it. After all clue rounds, every player votes once for one other player as the Liar. When voting, output only 'I vote for Player N' with a real player number other than your own; malformed or self-votes count as abstentions. The player with the most votes is accused; ties are resolved in configured player order. If the accused player is not the Liar, the Liar wins immediately. If the accused player is the Liar, the Liar gets exactly one final word guess: a correct guess wins for the Liar, and an incorrect guess wins for the non-Liars. Winners receive 1.0 reward and losers 0.0. Follow the latest Moderator instruction for the current phase. On a clue turn output only one concise indirect clue, not a vote or a question; on a voting turn output only the vote; on a final guess turn output only the guessed word, with no explanation. Never speak for another player or reveal a private role message.
+The messages always end with the token <EOS>.
+
+Your name is Player 5.
+
+Your role:You are Player 5. Follow the latest Moderator instruction. During voting use: I vote for [Player Name].
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: Liar Game begins with 5 players and exactly one Liar. There will be 2 clue round(s), followed by one vote from each player.<EOS>
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: Topic: Places.<EOS>
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: You are the Liar. You do not know the secret word. Infer it from others' clues while blending in. Give a plausible clue on your turn.<EOS>
+[user / player_27a99f01e114bf92a249aa3e]
+[Player 1]: I think it's a place where people go to enjoy rides and games.<EOS>
+[user / player_4b67834a4c0fa5590d2e36e3]
+[Player 2]: It's a location with ticket gates, roller coasters, and food stands.<EOS>
+[user / player_91de349605a422977a28c81e]
+[Player 3]: It involves a large playground area with themed sections and souvenir shops.<EOS>
+[user / player_811e7a3900f62f1f8432dfc0]
+[Player 4]: It's a destination featuring a Ferris wheel, a carousel, and a midway with carnival games.<EOS>
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: Round 1/2: Player 5, give one indirect clue about the secret word. Do not explicitly say the word. Be specific enough to show you know it without making it too easy for the Liar to infer.<EOS>
+[assistant / player_4fcf2ea2f5a654449f7d41be]
+[Player 5]: It's a place with a distinct entrance fee and multiple amusement areas within a single complex.<EOS>
+[user / player_27a99f01e114bf92a249aa3e]
+[Player 1]: I think it's a place where families spend the day on exciting rides and watching shows.<EOS>
+[user / player_4b67834a4c0fa5590d2e36e3]
+[Player 2]: It's a venue where you can ride a Ferris wheel to see the whole area from above.<EOS>
+[user / player_91de349605a422977a28c81e]
+[Player 3]: It's often a popular spot for birthday parties and has a dedicated area for children's games.<EOS>
+[user / player_811e7a3900f62f1f8432dfc0]
+[Player 4]: It's a place famous for its midway games where you can win small toys or stuffed animals.<EOS>
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: Round 2/2: Player 5, give one indirect clue about the secret word. Do not explicitly say the word. Be specific enough to show you know it without making it too easy for the Liar to infer.<EOS>
+[assistant / player_4fcf2ea2f5a654449f7d41be]
+[Player 5]: It's a venue where the thrill of dropping in a capsule ride is a defining feature alongside the carnival games.<EOS>
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: Clues are complete. All players vote privately now.<EOS>
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: Player 5, vote privately for one other player as the Liar using: 'I vote for [Player Name]'. Malformed or self-votes count as abstentions.<EOS>
+[assistant / player_4fcf2ea2f5a654449f7d41be]
+[Player 5]: I vote for Player 4<EOS>
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: The accusation is correct: Player 5 is the Liar.<EOS>
+[user / player_6748ec8b76683b7388719d17]
+[Moderator]: Player 5, make one final guess of the secret word.<EOS>
+[user / ]
+Now you speak, Player 5.
+[원문 API 응답]
+{
+  "id": "chatcmpl-95d8273c447eaeec",
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "logprobs": null,
+      "message": {
+        "content": "roller coaster",
+        "refusal": null,
+        "role": "assistant",
+        "annotations": null,
+        "audio": null,
+        "function_call": null,
+        "tool_calls": [],
+        "reasoning": null
+      },
+      "stop_reason": null,
+      "token_ids": null,
+      "routed_experts": null
+    }
+  ],
+  "created": 1791342695,
+  "model": "Qwen/Qwen3.5-9B",
+  "object": "chat.completion",
+  "moderation": null,
+  "service_tier": null,
+  "system_fingerprint": "vllm-0.22.0-346972fe",
+  "usage": {
+    "completion_tokens": 3,
+    "prompt_tokens": 1154,
+    "total_tokens": 1157,
+    "completion_tokens_details": null,
+    "prompt_tokens_details": null
+  },
+  "prompt_logprobs": null,
+  "prompt_token_ids": null,
+  "prompt_text": null,
+  "kv_transfer_params": null
+}

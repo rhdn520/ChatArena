@@ -317,4 +317,3 @@ class MafiaRolloutManager:
             diagnostics=controller.diagnostics(),
             discussion_endings=list(env.discussion_endings),
         )
-

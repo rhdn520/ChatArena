@@ -17,10 +17,11 @@ from .agent import SIGNAL_END_OF_CONVERSATION
 from .message import Message, visibility_label
 
 INTENT_PROMPT = (
-    "REQUEST intent: 지금 발언할 필요성을 비공개로 판단하세요. "
-    "0=할 말 없이 듣기, 1=할 말은 있지만 기다릴 수 있음, "
+    "REQUEST intent: 지금 대화에 보탤 내용과 발언의 시급성을 비공개로 판단하세요. "
+    "0=새로 보탤 내용이 없음, 1=보탤 내용은 있지만 기다릴 수 있음, "
     "2=지금 보탤 정보·질문·주장이 있음, "
-    "3=나에게 향한 질문·의혹·반박에 지금 응답할 필요가 있음. "
+    "3=자신에게 향한 질문·의혹·반박에 아직 답변이 필요함. "
+    "단순한 동의나 이미 한 말의 반복만 남았다면 0입니다. "
     "0~3 중 숫자 하나만 출력하세요."
 )
 SPEECH_PROMPT = (
@@ -152,7 +153,7 @@ class MafiaDiscussionController:
             if self._moderating_silence:
                 instruction += "\n모두 침묵하고 있으며 입력 대기도 끝났습니다. 발언을 강요하지 말고 END_DISCUSSION으로 투표로 넘기세요."
             elif self._closing_replies:
-                instruction += "\n종료 판단 뒤의 추가 답변·반박을 포함해 다시 판단하세요."
+                instruction += "\n종료 판단 뒤의 추가 정보·질문·주장·답변·반박을 포함해 다시 판단하세요."
         else:
             obs = tuple(env.get_observation(name))
             instruction = {"intent": INTENT_PROMPT, "speech": SPEECH_PROMPT}.get(
@@ -389,8 +390,9 @@ class MafiaDiscussionController:
                 if self._closing_replies:
                     # Recollect after the last speech: a previous speaking turn
                     # does not discharge a later request to answer or rebut.
+                    # Include contributions needed now (2), as well as replies (3).
                     self._scores = {name: score for name, score in self._scores.items()
-                                    if score == 3 and name != self.env.last_speaker}
+                                    if score >= 2 and name != self.env.last_speaker}
                     if not self._scores:
                         self._end("moderator")
                         return
@@ -406,7 +408,7 @@ class MafiaDiscussionController:
                 self.env.discussion_speak(rec.request.player_name, rec.response)
                 if self._closing_replies:
                     self._scores.pop(rec.request.player_name, None)
-                    self._stage = "choose"
+                    self._stage = "moderation"
                 else:
                     self._stage = "moderation" if self._use_moderator else "intent"
         elif kind == "moderation":
@@ -424,8 +426,13 @@ class MafiaDiscussionController:
                 else:
                     self._fail("Moderator failed: " + str(rec.error))
             elif control_token(rec.response) == "END_DISCUSSION":
-                if self._closing_replies or self._moderating_silence:
+                if self._moderating_silence:
                     self._end("moderator")
+                elif self._closing_replies:
+                    if self._scores:
+                        self._stage = "choose"
+                    else:
+                        self._end("moderator")
                 else:
                     self._closing_replies = True
                     self._stage = "intent"
