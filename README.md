@@ -184,13 +184,93 @@ out [`PettingzooChess` environment](chatarena/environments/pettingzoo_chess.py) 
 
 ### Mafia
 
-Run the dedicated Korean Mafia UI (port 8081):
+The mixed human/model launcher starts a dedicated Liar UI (port 8080) and
+the Korean Mafia UI (port 8081), each with its own Gradio public address.
+Each game has Qwen3.5-2B x2, Qwen3.5-9B x2, openai/gpt-5.6-luna x2, and one human.
+Human/model seats are shuffled for every new game. The small model was upgraded
+from 0.8B to 2B at the user's request. Its overrides use CHAT_ARENA_QWEN_2B_MODEL
+and CHAT_ARENA_QWEN_2B_BASE_URL.
+
+On this cluster, submit the CPU environment setup, then the GPU game job:
 
 ```bash
-conda run --no-capture-output -n chatarena_37 python -u mafia_app.py
+cd /shared/s3/lab07/solbeecho/ChatArena
+mkdir -p logs
+export SKIML_API_KEY="YOUR_PROXY_API_KEY"
+setup_job=$(sbatch --parsable scripts/slurm/setup_mixed_env.sh)
+sbatch --export=ALL --dependency=afterok:"$setup_job" scripts/slurm/run_mixed_games.sh
 ```
 
-Choose whether to play as Player 1 or spectate, set the AI model, and optionally enable the discussion moderator. The original `app.py` remains the general-purpose UI.
+Setup uses P2/node1/CPU4/32G/12h without GPUs. It reuses the installed
+environments and Python headers in `../ChatArena-old` when present; keep that
+directory while using these links. Otherwise, it installs local environments.
+The UI runtime dependencies are listed in `requirements-mixed-ui.txt`; vLLM
+uses a separate environment. HF downloads go to
+`/shared/s3/lab07/solbeecho/huggingface_cache`; other downloads stay in this workspace.
+Games use P2/node1/two RTX 3090s/CPU2/32G/12h. Both UIs share the two model
+servers. Do not run this script directly on the login node.
+KV caches have explicit sizes (9B: 2 GiB per GPU; 2B: 512 MiB) so simultaneous
+loading on a shared GPU does not distort automatic cache-memory profiling.
+
+Open the URLs labeled `라이어게임 주소:` and `마피아게임 주소:` in
+`logs/JOB_ID-mixed-games.out`. The launcher now waits for both local model
+servers' startup-complete log entries before starting either UI. During loading,
+no public URL is printed. Server output is in
+`outputs/mixed_games/job_JOB_ID/qwen35-{9b,2b}-server.log`.
+If a component exits, the job stops the other components and reports the log path.
+
+The Liar UI is adapted from `ChatArena-liar`: click **Create room** for a new
+one-human/six-AI game. Use your room code and private rejoin code to reconnect.
+Each new room is a separate game for another human participant. Role cards,
+sealed ballots, scores and next-game readiness are retained. The current
+`examples/liar_game.json` prompts and `liar_game.py` rules are used; the default
+is one speaking round, configurable in the UI. The automated log script's
+one-round override is separate and does not apply to this UI.
+
+The Mafia UI retains its existing flow and optional discussion moderator.
+GPT players and the optional mixed-game moderator connect to the user's
+LiteLLM proxy at `https://147.47.200.198:7861` using `SKIML_API_KEY`.
+The existing OpenAI-compatible client handles this proxy without installing
+the LiteLLM client library. TLS certificate verification is disabled only for
+this proxy client, as requested. No API key is written into game configs.
+Overrides: `CHAT_ARENA_GPT_MODEL`, `CHAT_ARENA_GPT_BASE_URL`,
+`CHAT_ARENA_GPT_API_KEY_ENV`, `CHAT_ARENA_GPT_SSL_VERIFY`.
+The URL must not contain angle brackets. If this proxy deployment requires a
+`/v1` prefix, set `CHAT_ARENA_GPT_BASE_URL=https://147.47.200.198:7861/v1`.
+The original `app.py` remains the general-purpose UI and is not the Liar launcher.
+
+#### Live debugging logs
+
+The main `logs/JOB_ID-mixed-games.out` now mirrors both Qwen server logs and
+shows `[MODEL_START]` / `[MODEL_READY]` per model. Individual server files are
+still retained under `outputs/mixed_games/job_JOB_ID/`. GPT is remote: its
+`GPT_CONFIG` line reports endpoint and credential presence, with `status=not_probed`;
+configuration does not verify the remote model. No startup GPT request is sent.
+
+Liar callbacks print `CREATE_RECEIVED`, `GAME_INIT`, `GAME_READY`, `ROOM_READY`,
+and `ROOM_ADVANCED`. Create/join/submit return the game screen immediately;
+the existing timer advances AI clue turns. During voting all six AI ballots
+are requested concurrently without waiting for the human ballot; the existing
+game rules resolve the sealed ballots after all seven are collected. Concurrent
+timer ticks skip updates while an AI owns the room lock. An API exception pauses AI
+advancement in that room and appears in the UI.
+
+Completed UI games save player/model mappings, public dialogue and rewards in
+`outputs/mixed_games/job_JOB_ID/{liar,mafia}/`. Liar records also contain the
+final word, Liar identity and ballots. `GAME_SAVED` prints each JSON path.
+The Liar cumulative scoreboard reveals models and current player numbers after
+game end; cumulative AI identities follow their model across seat shuffles.
+Runtime files under `logs/` and `outputs/`, virtual environments and `.env` files
+are excluded from new Git additions. Previously tracked artifacts remain tracked.
+
+Both UIs log `API_START`, `API_WAIT` every 15 seconds while a call is pending,
+`API_DONE`, `API_REJECT`, and `API_ERROR`. Lines include request ID, model,
+player, elapsed time, finish reason and token counts. They never log API keys,
+request headers, game dialogue, private roles, or the secret word.
+
+```bash
+tail -f logs/JOB_ID-mixed-games.out logs/JOB_ID-mixed-games.err
+```
 
 Mafia supports private night actions, intent-based daytime discussion, optional LLM moderation, and human interruptions in the web UI. See the [Mafia discussion pipeline (한국어)](docs/devdoc/mafia_discussion_pipeline.md) for configuration, execution, RL training, and tests.
 

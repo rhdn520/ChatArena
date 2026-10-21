@@ -2,7 +2,17 @@
   "required_directives": {
     "nodes": "1", "gres": "gpu:A6000:1", "time": "48:00:00", "cpus-per-task": "2", "mem": "32G"
   },
-  "allowed_directives": ["job-name", "nodes", "gres", "time", "cpus-per-task", "mem", "output", "error"],
+  "allowed_directives": ["job-name", "nodes", "gres", "time", "cpus-per-task", "mem", "output", "error", "partition", "export"],
+  "resource_profiles": {
+    "scripts/slurm/run_mixed_games.sh": {
+      "partition": "P2", "nodes": "1", "gres": "gpu:rtx_3090:2",
+      "time": "12:00:00", "cpus-per-task": "2", "mem": "32G", "export": "ALL"
+    },
+    "scripts/slurm/setup_mixed_env.sh": {
+      "partition": "P2", "nodes": "1", "time": "12:00:00",
+      "cpus-per-task": "4", "mem": "32G"
+    }
+  },
   "submission_profiles": {
     "scripts/slurm/run_qwen35_games.sh": {
       "python": ".venv-qwen35/bin/python",

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import html
+import os
 from copy import deepcopy
 
 import gradio as gr
@@ -9,9 +10,10 @@ import gradio as gr
 from ..arena import Arena
 from ..config import ArenaConfig
 from .mafia_session import SessionRegistry
+from .mixed_lineup import DEFAULT_GPT_MODEL, PLAYER_COUNT, make_gpt_backend, make_mixed_players
 
 ROLE_NAMES = {"mafia": "마피아", "doctor": "의사", "police": "경찰", "villager": "시민"}
-DEFAULT_MODEL = "gpt-6-luna"
+DEFAULT_MODEL = os.environ.get("CHAT_ARENA_GPT_MODEL", DEFAULT_GPT_MODEL)
 PHASE_NAMES = {
     "NIGHT_MAFIA": "밤 · 마피아 공격 투표",
     "NIGHT_MAFIA_DISCUSSION": "밤 · 마피아 비공개 의논",
@@ -44,7 +46,8 @@ CSS = """
 
 def make_config(player_count, participate, model, temperature, max_tokens,
                 moderator_enabled, moderator_model, moderator_guide,
-                max_messages, max_rounds, seconds, silence_seconds, max_days, reveal_roles):
+                max_messages, max_rounds, seconds, silence_seconds, max_days, reveal_roles,
+                mixed_lineup=False):
     count = int(player_count)
     if not 3 <= count <= 10:
         raise ValueError("참가자 수는 3~10명이어야 합니다.")
@@ -61,12 +64,18 @@ def make_config(player_count, participate, model, temperature, max_tokens,
             "name": name, "role_desc": f"당신은 {name}입니다. 자신의 팀이 승리하도록 행동하세요.",
             "backend": {"backend_type": "human"} if participate and i == 0 else dict(backend),
         })
+    if mixed_lineup:
+        if count != PLAYER_COUNT or not participate:
+            raise ValueError("혼합 라인업은 사람 1명과 AI 6명, 총 7명입니다.")
+        players = make_mixed_players(GLOBAL_PROMPT, temperature, max_tokens,
+                                     gpt_model=model.strip())
     moderator = None
     if moderator_enabled:
         moderator = {
             "name": "Moderator", "role_desc": moderator_guide.strip() or MODERATOR_GUIDE,
             "global_prompt": "진행 안내는 한국어로 하세요. 제어 명령은 요청된 영문 그대로 출력하세요.",
-            "backend": dict(backend, model=moderator_model.strip(), temperature=0.3),
+            "backend": (make_gpt_backend(0.3, max_tokens, moderator_model.strip()) if mixed_lineup
+                        else dict(backend, model=moderator_model.strip(), temperature=0.3)),
         }
     return ArenaConfig(
         players=players, global_prompt=GLOBAL_PROMPT,
@@ -103,12 +112,16 @@ class MafiaUI:
             with gr.Row():
                 with gr.Column(scale=1, min_width=300):
                     gr.Markdown("### 새 게임 설정")
-                    count = gr.Slider(3, 10, value=4, step=1, label="전체 참가자 수")
-                    human = gr.Checkbox(True, label="직접 참여 · Player 1", info="끄면 비밀 정보를 포함한 전체 관전 모드입니다.")
+                    count = gr.Slider(3, 10, value=PLAYER_COUNT, step=1, label="전체 참가자 수", interactive=False)
+                    human = gr.Checkbox(True, label="직접 참여 · 좌석 무작위 배정", interactive=False)
+                    mixed = gr.Checkbox(True, label="혼합 7인 라인업", interactive=False,
+                                        info="Qwen3.5-2B 2명 · Qwen3.5-9B 2명 · openai/gpt-5.6-luna 2명 · 사람 1명")
                     gr.Markdown("역할은 무작위로 배정합니다. 4~6명: 마피아 1 · 의사 1 · 경찰 1 · 나머지 시민. 7명 이상은 마피아 2명입니다.")
-                    model = gr.Textbox(value=DEFAULT_MODEL, label="AI 플레이어 모델", info="OpenAI API 모델 이름 · API 키는 .env의 OPENAI_API_KEY 사용")
+                    model = gr.Textbox(value=DEFAULT_MODEL, label="GPT 플레이어 모델", interactive=False,
+                                       info="GPT 2명에 적용 · LiteLLM 서버 · SKIML_API_KEY 환경변수 사용")
                     with gr.Accordion("AI 응답 설정", open=False):
-                        temperature = gr.Slider(0, 2, value=0.7, step=0.1, label="응답 다양성")
+                        temperature = gr.Slider(0, 2, value=0.7, step=0.1, label="응답 다양성 · Qwen",
+                                                info="GPT-5.6-luna는 모델 기본값(1)을 사용합니다.")
                         tokens = gr.Slider(32, 16384, value=4096, step=1, label="최대 생성 토큰",
                                            info="추론 모델은 내부 추론 토큰도 포함합니다. 토큰 한도로 빈 응답이 발생하면 늘려주세요.")
                     moderator_enabled = gr.Checkbox(False, label="토론 종료 판단 LLM 사용", info="발언에 끼어들지 않고 반복·충분한 논의 여부를 판단해 투표로 넘깁니다. 꺼져 있어도 제한·침묵 시 자동 전환합니다.")
@@ -153,7 +166,7 @@ class MafiaUI:
             )
             self.settings = [count, human, model, temperature, tokens, moderator_enabled,
                              moderator_model, moderator_guide, max_messages, max_rounds,
-                             seconds, silence, days, reveal]
+                             seconds, silence, days, reveal, mixed]
             self.live_outputs = [self.status, self.identity, self.roster, self.chat_payload,
                                  self.start_button, self.pause_button, self.input, self.send_button]
             self.start_button.click(self.start, [self.key, *self.settings],
@@ -224,7 +237,8 @@ class MafiaUI:
                           or env.phase == "DAY_VOTING" else "밤 행동을 처리하고 있습니다.")
             elif state == "waiting_human":
                 detail = "추가 발언을 기다리고 있습니다."
-            if human and env.phase.startswith("NIGHT_") and next_player != human and not participant:
+            if (state != "error" and human and env.phase.startswith("NIGHT_")
+                    and next_player != human and not participant):
                 detail = "밤의 비공개 행동이 진행 중입니다."
             status = f"**{env.day}일차 · {phase}** — {labels.get(state, state)}\n\n{detail}"
             identity = (f"**내 이름: {human} · 역할: {ROLE_NAMES[env.player_roles[human]]}**"

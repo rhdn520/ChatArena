@@ -9,6 +9,11 @@ ROOT = Path(__file__).resolve().parents[2]
 
 def validate_file(path):
     policy = json.loads((ROOT / "configs/slurm_standard.json").read_text())
+    path = Path(path).resolve()
+    try:
+        relative_path = str(path.relative_to(ROOT))
+    except ValueError:
+        relative_path = ""
     directives = {}
     for line in Path(path).read_text().splitlines():
         if not line.lstrip().startswith("#SBATCH"):
@@ -20,7 +25,8 @@ def validate_file(path):
         if name not in policy["allowed_directives"] or name in directives:
             raise ValueError("Unknown or duplicate Slurm directive: " + name)
         directives[name] = value
-    for name, value in policy["required_directives"].items():
+    required = policy.get("resource_profiles", {}).get(relative_path, policy["required_directives"])
+    for name, value in required.items():
         if directives.get(name) != value:
             raise ValueError(f"Required Slurm --{name}={value}")
     return directives

@@ -2,11 +2,13 @@
 from __future__ import annotations
 
 import threading
+import logging
 import time
 import uuid
 from typing import Dict
 
 from ..backends.human import Human, HumanBackendError
+from .game_records import save_finished_game
 
 
 class GameSession:
@@ -21,6 +23,9 @@ class GameSession:
         self.lock = self.controller.lock if self.controller else threading.RLock()
         self.status = "paused"
         self.error = None
+        self.record_id = uuid.uuid4().hex
+        self.record_attempted = False
+        self._logged_state = None
         self.last_access = time.monotonic()
         self._stop = threading.Event()
         self._wake = threading.Event()
@@ -28,6 +33,8 @@ class GameSession:
         if self.controller:
             self.controller.realtime = True
             self.controller.pause()
+        logging.info("MAFIA_CREATED session=%s humans=%s roster=%s", self.record_id,
+                     self.humans, [(p.name, getattr(p.backend, "model", "human")) for p in arena.players])
         self.thread = threading.Thread(target=self._run, daemon=True)
         self.thread.start()
 
@@ -92,7 +99,17 @@ class GameSession:
                             self.status = "terminal" if result.terminal else "paused"
                     except HumanBackendError:
                         self.status = "waiting_human"
+                with self.lock:
+                    state = (self.arena.environment.phase, self.status, self.error)
+                    if state != self._logged_state:
+                        logging.info("MAFIA_STATE session=%s phase=%s status=%s error=%s",
+                                     self.record_id, *state)
+                        self._logged_state = state
+                    if self.arena.environment.is_terminal() and not self.record_attempted:
+                        self.record_attempted = True
+                        save_finished_game(self.arena, "mafia", self.record_id)
             except Exception as exc:
+                logging.exception("MAFIA_WORKER_ERROR session=%s", self.record_id)
                 with self.lock:
                     if self.controller:
                         self.controller.pause()

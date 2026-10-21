@@ -1,5 +1,433 @@
 # Current work
 
+## 2026-10-21 prepare sb/refinement for user-requested push
+
+User requested a new sb/refinement branch and push. Preparing the mixed UI,
+backend compatibility, public launchers, parallel Liar ballots, corrected
+dropdown updates, model-linked cumulative scores and completed game records.
+Original Liar prompt rollback remains in place; Mafia environment/controller
+are unchanged. Added root logs/outputs, .venv* and .env.* ignore patterns with
+exceptions for configuration examples; existing tracked historical artifacts
+are retained. No model API calls, tests or Slurm jobs are needed for Git work.
+
+## 2026-10-21 695436 dropdown correction and model-labelled cumulative scores
+
+User reported two voting UIs, first with only P, asked about 2B outputs and
+requested models in cumulative scores. Read both completed game JSONs and stdout.
+Each game has exactly one LIAR_VOTES_STARTED/READY batch for6 AIs. The actual
+ballots were parallel; no second vote round is present. Found a concrete display
+regression introduced by the JSON polling transport: Dropdown Python normally
+normalizes choices to (label,value), but JS polling had passed raw Player strings.
+Frontend indexes these as pairs, causing P labels/incorrect submitted values;
+subsequent direct backend callbacks could restore a normal dropdown. Changed
+choices to explicit pairs for both transport paths. Browser outcome unverified.
+
+2B observations: game1 Player6/7 output votes during CLUE; game2 Player1 said
+I will never guess the secret word, Player5 explicitly revealed Salesperson.
+Other models generally produced short clue statements in these two games.
+The current original prompts do prohibit voting during clues but repeat voting
+format in role_desc; private role instructions are long and final request is
+generic Now you speak. This supports weak phase/role instruction following with
+prompt complexity contributing; not proof of a broken endpoint or quantitative
+model comparison. Prompt rollback remains intact; no prompts changed this turn.
+
+Cumulative table now includes Model and Current player columns, revealed after
+game end. Fixed deeper accounting issue: AI1..AI6 previously followed shuffled
+player order, so model identities could change while their points accumulated.
+Now each room's AI identity keeps its model across games and follows that model
+to its new seat (two separate identities per model). Seat shuffling and rewards
+are unchanged. Existing live rooms cannot hot-load or repair their old totals;
+new-process rooms use the new mapping. No tests/API calls/submissions/restarts.
+
+## 2026-10-21 Liar prompt rollback, parallel ballots, reduced UI redraw
+
+Latest user explicitly cancelled the preceding prompt changes. Restored all
+Liar environment instruction/role text to the pre-change repository version
+(no remaining diff in chatarena/environments/liar_game.py). Removed the optional
+latest_instruction_as_request backend behavior and the UI opt-in. Restored
+template role_desc and mixed-lineup max_tokens default4096 for Qwen; no256 cap.
+Other established model/API compatibility fixes, lineup, records and Mafia
+diagnostics remain. Earlier approved prompt-improvement section below is now
+superseded by this rollback.
+
+Liar vote generation now submits all six AI ballots via ThreadPoolExecutor
+without waiting for a human ballot. Observations are captured before any ballot
+is committed, AI results stay private, and the UI timer returns while calls run.
+All results plus the human ballot are committed to the existing environment
+only when complete, preserving the original tie/reward resolution. Logs emit
+LIAR_VOTES_STARTED and LIAR_VOTES_READY. No model API calls were made by the
+agent; a running UI will call GPT as part of user gameplay after relaunch.
+
+Liar polling previously targeted every visible output every2s and resent
+unchanged HTML/Markdown/input updates, causing pending/redraw flicker. Added
+per-room/token cached render comparison and gr.skip for unchanged fields.
+Timer now targets an invisible JSON transport with show_progress=hidden;
+client-side change applies updates without connecting pending timers to visible
+components. Session identity is still updated only by create/join actions.
+No tests, browser checks, jobs, API requests, downloads or cancellations run.
+Changes require new UI processes; browser result/parallel execution unverified.
+
+## 2026-10-21 approved Liar phase prompts and Mafia night diagnostics
+
+User approved the proposed Liar prompt changes and asked whether Mafia's night
+screen was progressing. Existing 690617 logs show Mafia GPT intent/speech/night
+requests with HTTP200 and Qwen2B Player2 responses at 09:36:34 and 09:36:41.
+No pending API call is shown after the latter response. Those logs cannot
+distinguish a human turn from a controller error, as no session status was logged.
+Found a concrete UI issue: the night privacy detail override overwrote even the
+error message. It now preserves error detail while continuing to hide private
+actors/actions. Added MAFIA_CREATED roster and transition-only MAFIA_STATE logs,
+plus MAFIA_WORKER_ERROR for unexpected exceptions. No Mafia rules/prompts changed.
+
+Liar phase instructions now explicitly identify CLUE/VOTE/FINAL_GUESS and their
+output format. CLUE requests one sentence <=20 words, no vote/explanation or
+explicit answer/candidate. Role prompts clarify non-liars already know the answer
+and share team goals; liars only explicitly guess in FINAL_GUESS. The Liar UI
+uses neutral role_desc rather than a permanent voting-format instruction. Its
+AI configs opt into latest_instruction_as_request: the backend moves the latest
+already-visible Moderator instruction to the final request, replacing the generic
+Now you speak prompt without duplicating it or exposing other players' messages.
+Other backend callers retain prior behavior. Both Qwen models in Liar now have
+max_tokens=256; GPT keeps4096 for reasoning capacity, same phase text for all.
+Game mechanics, tie resolution, seat assignment and private filters unchanged.
+Active job690617 still uses old imported code; relaunch needed. No tests,
+API calls, jobs or cancellations performed. Prompt efficacy and new status logs
+have not yet been observed in a running process.
+
+## 2026-10-20 user-approved small-model upgrade to Qwen3.5-2B
+
+Changed both mixed UIs and launcher defaults from Qwen3.5-0.8B to Qwen3.5-2B.
+Lineup remains two small Qwen, two 9B, two GPT, one human, shuffled each game.
+Renamed active small-model env overrides to CHAT_ARENA_QWEN_2B_MODEL and
+CHAT_ARENA_QWEN_2B_BASE_URL, PID variables and server log to qwen35-2b-server.log;
+kept port8001, 512MiB explicit KV and both-GPU resources unchanged. Updated the
+isolated debug script and README to match. Thinking=False, stop=False and game
+rules/prompts/persistence are unchanged. Existing 690380 process is untouched.
+No jobs, downloads, API requests or tests run for this change. New launcher
+submission will download missing 2B weights under the existing HF cache. 2B
+loading and game operation have not yet been observed.
+
+## 2026-10-20 completed UI game records requested after 690380
+
+Existing log confirms Liar room 1689B01DCCB0 game 1 reached terminal=True.
+Roster: Player 1/6 Qwen0.8B, Player 5/7 Qwen9B, Player 2/4 GPT5.6-luna,
+Player 3 human. Previous UI code persisted no transcript/results, only diagnostic
+stdout; this completed game's full transcript cannot be recovered from that
+stdout. No requests to running server or GPT were made for this task.
+
+Added game_records.save_finished_game and terminal hooks in Liar room score
+recording and Mafia session worker. Completed games save once per game to
+outputs/mixed_games/job_JOBID/liar/ROOM-game-NNNN.json or
+outputs/mixed_games/job_JOBID/mafia/SESSION-game-0001.json. JSON contains player
+names/types/model IDs, public messages, rewards and timestamp; Liar additionally
+includes terminal winner/liar/word/guess/votes and clue round count. No API
+credentials, room/rejoin tokens or private observations are serialized. GAME_SAVED
+prints the path and roster; filesystem errors are reported without crashing the
+game. Liar terminal participant table now includes a model column. Active UI
+processes need relaunch; actual persistence is not yet observed. No tests/model
+calls/submissions/restarts performed for this change.
+
+## 2026-10-20 direct Qwen reproduction and confirmed parser fix
+
+User explicitly requested direct repeated debugging/verification. Submitted CPU
+debug jobs on b14 alongside existing service job 689503: P2, node1, CPU1, 4GB,
+12h, no extra GPU. scripts/slurm/debug_mixed_qwen.sh runs
+scripts/debug_mixed_qwen.py; it uses the real create_human_game/Arena turn path
+with isolated controlled first two Qwen speakers and human Player 7. Other
+mixed seats are constructed but never invoked. A query guard blocks every
+non-loopback/non-Qwen endpoint; GPT has a dummy key and is never called.
+
+690183 reproduced empty answers even without custom stop. Qwen 0.8B returned
+content_chars=0 with reasoning_chars=3..16. Read the installed model template
+and vLLM Qwen3ReasoningParser: the Qwen3.5 template defaults to thinking OFF,
+but parser defaults thinking_enabled=True when chat_template_kwargs omits the
+setting. Mixed Qwen configs now explicitly pass enable_thinking=False, matching
+the existing template default and aligning the parser. Private reasoning is
+never repurposed as public output. Stopped only our outdated debug job 690183.
+
+690213 then completed four scenarios, two turns each: Qwen 0.8B four successful
+turns, Qwen 9B four successful turns, all HTTP 200 with nonempty content and
+reasoning_chars=0, no retries/errors. DEBUG_RESULT failed_scenarios=0,
+total_scenarios=4, GPT_calls=0. This establishes the empty first-answer fix in
+the real Liar engine path, not a browser transition or complete mixed game.
+Existing service/UI processes were not restarted or cancelled and still need
+relaunch to load the explicit setting. No GPT/API remote requests or downloads.
+
+## 2026-10-20 689503 empty first Qwen answer
+
+Existing logs establish: Create room succeeded in 0.1s, human was Player 3,
+and the timer requested Player 1 (Qwen 0.8B). The server returned HTTP 200 in
+7s, finish_reason=stop, completion_tokens=8, but message.content was empty.
+The room paused on the explicit empty-response ValueError before GPT was called.
+stderr contains Slurm logfile warnings, not the game exception (logged to stdout).
+
+Mixed UI Qwen configs now omit custom stop strings via use_stop=False. The
+previous request included stop=['<|endoftext|>', '<EOS>']; early marker termination
+is a hypothesis, not proven by the old response metadata. Added API_TEXT metadata
+(content/reasoning character counts, stop_reason) and API_EMPTY logging without
+logging text or private game information. Mixed Qwen configs enable a single
+logged retry for an empty finish_reason=stop response; another empty reply still
+raises the error and pauses the room. Other callers retain their prior default.
+No thinking setting, model, prompt, game rule, credential or server resource
+changed. No model/API calls, tests, job submissions or cancellations performed.
+Existing UI processes require relaunch; success remains unverified. User should
+submit the existing Slurm launcher and create a fresh room to observe the logs.
+
+## 2026-10-20 Create room responsiveness and live diagnostics (689398)
+
+User reported Create room did not transition and requested continuous server
+printing and per-model loading visibility. Existing 689398 logs confirm both
+Qwen servers reached Application startup complete; 9B completed two actual
+chat requests with HTTP 200. stderr was empty at inspection. Existing logs do
+not establish why the browser did not update or which remote request was pending.
+
+Create/join/submit/restart callbacks previously ran AI-generation loops within
+the Gradio event. They now return the initial/action snapshot directly, leaving
+AI advancement to the existing two-second timer. A busy room lock causes other
+timer ticks to skip updates rather than pile up. Timer updates no longer write
+session identity, so a stale poll cannot replace a newer room identity. A raised
+AI exception pauses further automatic calls in the room and displays the error.
+Game prompts, rules, models, seat assignment and private visibility filters remain
+unchanged. Browser operation after these source changes is not yet verified.
+
+Added timestamped logging for both UI processes, Create/game/room stages, human
+action metadata, and shared API calls. API_START includes model/player/host,
+message count, system-message positions and parameter names. API_WAIT prints
+every 15 seconds during a pending call. API_DONE includes elapsed time, finish
+reason and completion token count; rejects/errors identify model and player.
+No dialogue, prompt, role, word, headers, keys or rejoin credentials are logged.
+GPT_CONFIG reports only endpoint/key-env/key-presence and status=not_probed;
+no remote validation request is sent. Main Slurm stdout mirrors existing Qwen
+log files, retains individual files, and labels MODEL_START/READY per model.
+
+No tests, model/API requests, installations, job submissions/cancellations were
+performed. Prior GPT API prohibition remains in force for agent-driven work.
+The user must launch a new job from their credential-bearing shell to load these
+changes and inspect its main output while clicking Create room in their browser.
+
+## 2026-10-20 688517 system-order error confirmed in Qwen
+
+The repeated system-message error is definitively present in the 0.8B vLLM
+server log as a chat-template exception, including HTTP 400. Both cached Qwen
+chat_template.jinja files explicitly raise this error for a late system message
+(line 85). The earlier fix applied only to GPT; Qwen mixed configs omitted the
+existing system_messages_at_start option. Enabled it in both Qwen configs and
+as the default for Qwen3.5 model IDs when older configs omit it. The first system
+prompt is retained, subsequent instructions use user role. No instruction text,
+private-visibility filtering or game rules changed. No API requests, tests,
+installations or job submissions were performed. Existing UI processes require
+relaunch; successful inference after this correction is not yet established.
+
+## 2026-10-20 job 688497 startup loop tool dependency corrected
+
+stderr repeatedly reports 'rg: command not found' at the new readiness loop.
+The compute node lacks ripgrep although the tool shell provides it. Replaced
+both literal log matches with standard grep -Fq in run_mixed_games.sh; no new
+installation is needed. This error does not establish a model-server failure.
+The running job executes Slurm's submitted script copy and cannot pick up the
+edit; a new submission is required. No API calls/tests/submissions performed.
+
+## 2026-10-20 job 688467: UI opened before Qwen readiness
+
+Repeated connection warnings contain only player numbers, not model IDs.
+Both existing model logs are still in initialization and have no startup-complete
+entry at inspection time. Therefore Qwen readiness is a concrete outstanding
+issue; the old warnings alone cannot definitively identify each failed model.
+Changed normal service sequencing: wait on the two model servers' existing
+'Application startup complete' log entries before launching any UI/public link.
+This is lifecycle orchestration, with no HTTP/inference probe or GPT request.
+If a model process exits or startup exceeds 2700 seconds, print logs and exit.
+Installed cleanup before starting children and bound cleanup termination so a
+failed model does not leave the allocation waiting indefinitely on child exits.
+API connection failures now log model ID and underlying connection error before
+the existing retry handling, without prompt/header/key logging. No Player/game
+termination logic changed. No API calls, tests or submissions were performed.
+Current 688467 processes do not reload these source changes. They may finish
+loading; after readiness create a fresh room rather than continuing the errored one.
+
+## 2026-10-20 proxy requires system messages at the beginning (688437)
+
+User reported HTTP 400 'System message must be at the beginning'; the same
+exception appears in 688437 stderr. format_messages previously appended the
+current-turn instruction as a system message after the conversation when
+system_messages_at_start was omitted. Enabled the existing option for all
+shared GPT configs (both games and optional Mafia moderator), and made it the
+default for normalized gpt-5.6-luna even when older configs omit the option.
+The initial system prompt is retained; subsequent instructions use user role,
+as in the existing automated pilot's protocol. Text, visibility filtering and
+game rules are unchanged. No GPT API calls, tests or submissions were run.
+Existing UI processes must be relaunched to load the change.
+
+## 2026-10-20 Qwen startup repair completed: job 686167
+
+Cancelled only failed-cleanup job 686090 and submitted the existing mixed UI
+script as 686167 under the user's explicit repair/relaunch authorization.
+Preserved P2/3090x2/node1/CPU2/32G/12h, model IDs, contexts and game code.
+Explicit KV allocations fixed the concurrent-server automatic profiling error:
+0.8B reserves 512 MiB (34,492 tokens); 9B reserves 2 GiB per rank (106,927 tokens).
+Both server logs now contain 'Application startup complete' (0.8B line 68,
+9B line 97), and logs/686167-mixed-games.err is empty at completion of this task.
+No claim of generated dialogue or full game validation is made.
+
+9B had only one of four weight shards cached. The normal server startup
+downloaded the remaining shards under the requested HF cache; all four are
+now present (19,306,216,416 bytes total checkpoint payload). Long pauses were
+download and NFS weight-loading time, not a proven TP deadlock. No GPU splitting
+change was made. Loading, compilation and CUDA warmup all completed.
+
+No GPT API calls, game starts, inference probes, tests or new checkers were run.
+The tool submission shell did not inherit SKIML_API_KEY. Actual mixed-game use
+requires the user's credential environment (or their existing dotenv setup);
+do not claim proxy access validated by this server-only startup observation.
+Current job remains running. Public UI links are in logs/686167-mixed-games.out.
+
+## 2026-10-20 active repair after job 686090; GPT API forbidden
+
+The user explicitly requested continuing fixes/relaunches until Qwen startup
+works, without using the GPT API. Job 686090's small server failed because
+automatic KV cache memory profiling produced -7.33 GiB while the 9B server
+was loading concurrently on a shared GPU. Replaced automatic KV size with
+explicit allocations: 9B 2 GiB per rank, 0.8B 512 MiB. Installed vLLM source
+confirms this skips automatic free-memory profiling for KV sizing. Existing
+resources, models, context lengths and sampling settings remain unchanged.
+The failed job was still shown RUNNING in cleanup. Only this job is authorized
+for cancellation and relaunch; unrelated jobs must be preserved. Observe
+existing server startup logs; do not start games or call GPT. No new test,
+probe, checker, or preflight script is authorized by this repair request.
+
+## 2026-10-20 job 686040 failed during FlashInfer sampling compilation
+
+The updated job stderr shows shutdown (exit 1), not continued initialization.
+The 0.8B server's FlashInfer sampler invokes /usr/local/cuda-13/bin/nvcc, which
+does not exist, and ninja exits 127. Earlier connection errors happened before
+server readiness; the job subsequently failed and shut down both UIs. Merely
+waiting will not recover this stopped job. Set VLLM_USE_FLASHINFER_SAMPLER=0
+in the mixed launcher, matching the existing automated pilot configuration;
+installed vLLM source confirms this selects its PyTorch-native sampler and
+avoids this FlashInfer sampling JIT build. Model and sampling parameter values
+are unchanged, but the sampler implementation changes. No CUDA installation,
+tests, API probes or job submissions were performed. Runtime remains unverified.
+
+## 2026-10-20 GPT-5.6-luna rejects temperature 0.7
+
+User reported a LiteLLM-wrapped upstream error with param=temperature, code=400,
+stating only the model default (1) is accepted. GPT-5.6-luna now omits temperature
+at the API boundary; its shared backend config records 1.0. This applies to both
+games and the optional GPT moderator. Qwen sampling is unchanged, and the Mafia
+temperature control is labeled for Qwen. Existing unsupported-option handling
+also recognizes wrapped 'Unsupported value:' errors for explicitly identified
+stop/temperature options. No API calls, tests, installations or job submissions
+were performed. The running 686031 process needs a new launch for these edits.
+
+## 2026-10-20 job 686017 shutdown: ninja missing from executable search path
+
+User reported Gradio's 'Could not parse server response' browser error.
+The Gradio frontend emits this when response.json() fails. Job 686017 stderr
+confirms component failure and UI teardown; the 0.8B server log explicitly
+reports FileNotFoundError: ninja in FlashInfer CUDA sampling compilation.
+The ninja executable exists in .venv-qwen35/bin, but the launcher only selected
+the Python executable and did not add that environment's bin directory to PATH.
+Added it to PATH before spawning servers; new environment installs also list
+ninja explicitly. Current environment needs no reinstall for this fix.
+Server teardown is consistent with the browser parsing failure; no browser
+network capture establishes the exact HTTP response. No models, game settings,
+API requests, tests, installations or job submissions were changed/run.
+
+## 2026-10-20 one-round UI default and repeated proxy stop error
+
+Set the Liar UI default and room creation defaults to one speaking round at
+the user's request; engine/example defaults remain unchanged and the selected
+UI count is passed into each game. The current GPT factory already sets
+use_stop=False, but the user reported the same proxy error with job 686005.
+Logs do not capture request bodies, so the repeated error's origin is not proven.
+The backend now also disables stop by normalized model ID gpt-5.6-luna for
+configs that omit the flag. Extended the existing unsupported-parameter handling
+to recognize LiteLLM's explicit UnsupportedParamsError parameter list even when
+code is '400' and param is None, for the already-handled stop/temperature/token
+options. Other errors still propagate. No test, request logging, API calls or
+jobs were added/run. New jobs and their newly printed public links are required
+to load these changes; existing UI processes retain their imported code.
+
+## 2026-10-20 LiteLLM rejects stop for openai/gpt-5.6-luna
+
+User reported UnsupportedParamsError listing stop. The proxy wraps it as code
+400 with param=None, so the existing official-API unsupported-parameter fallback
+does not catch it. Added use_stop (default True) to the backend and set it False
+in the shared GPT configuration, including the optional mixed Mafia moderator.
+GPT requests now omit stop from the first call; Qwen and legacy callers keep
+their existing behavior. No game prompts, proxy settings or models were changed.
+No tests/API calls/jobs were run. Job 686004 must be relaunched to load this change.
+
+## 2026-10-20 user-selected LiteLLM model name
+
+The requested model ID is now exactly openai/gpt-5.6-luna. Updated the shared
+GPT default, Slurm launcher default and both UI lineup labels; the Mafia
+model field and optional moderator inherit the shared default. Proxy address,
+SKIML_API_KEY and per-client TLS settings are unchanged. No jobs or API calls
+were run. Existing clients in job 685990 need a new launch to use this model.
+Explicitly export CHAT_ARENA_GPT_MODEL=openai/gpt-5.6-luna when submitting to
+override any previous model value inherited from the shell.
+
+## 2026-10-20 GPT authentication correction: user's LiteLLM proxy
+
+The user clarified that the key belongs to the LiteLLM proxy at
+https://147.47.200.198:7861 and must be read from SKIML_API_KEY, with certificate
+verification disabled. The previous default routed it to the official OpenAI
+endpoint, producing the reported 401. Updated GPT backend configuration for
+both UIs and the optional mixed-game Mafia moderator to use that proxy/key
+and ssl_verify=False. The setting affects only that client; Qwen is unchanged.
+Per-player clients can now initialize without an unrelated OPENAI_API_KEY.
+Kept GPT-5-luna model ID and the existing OpenAI-compatible SDK; no LiteLLM
+client installation is needed. Endpoint/key-env/TLS overrides are available.
+No API calls, tests, installations or job submissions were performed. Restart
+the GPU UI job after exporting SKIML_API_KEY; source edits do not reconfigure
+already-created clients in job 685972. Proxy reachability/model access remain
+unverified. This section supersedes the earlier official-endpoint/key defaults.
+
+## 2026-10-20 mixed human/model UI implementation (current task)
+
+The user re-cloned ChatArena (HEAD f35bd96) and requested the original Liar
+room UI with the current merged game's prompts, plus mixed models in both games.
+The Liar integration commit aaa322b contained only engine/words/examples;
+it did not include the original multiplayer UI. The existing automated pilot
+uses one model for all players and overrides Liar to one round at launch.
+
+Restored chatarena/ui/liar_game_gradio.py (originally from ChatArena-liar
+ebc2e9d, reusing the prior explicitly adapted copy in ChatArena-old). It keeps
+rooms, rejoin credentials, private cards, sealed ballots, next-game readiness
+and cumulative scores. Adapted to exactly one human and six AI; uses the current
+examples/liar_game.json global/role prompts and the unchanged current engine
+and vocabulary. The UI's imported extra ballot prompt was omitted; no prompt
+or engine files were edited. Default speaking rounds remain two, selectable
+in the UI. The historical pilot's one-round override stays separate.
+
+Added the shared mixed_lineup helper: Qwen3.5-0.8B x2 (the earlier approved
+replacement for unavailable 1B), 9B x2, GPT-5-luna x2, human x1. Human and model
+seats randomize each new game. Mafia retains its existing UI/controller and
+rules, now defaulting to this fixed mixed lineup and GPT-5-luna instead of 6.
+The backend change adds only per-player base_url/api_key_env clients; callers
+without these options still use the existing module client and log wrapper.
+Qwen uses local endpoints; GPT uses OPENAI_API_KEY and an explicit OpenAI
+endpoint, with optional CHAT_ARENA_GPT_MODEL/BASE_URL overrides.
+
+liar_app.py (8080) and mafia_app.py (8081) enable sharing and print distinct
+Korean-labeled public addresses before blocking. run_mixed_games.sh starts both
+UIs and two shared model servers on P2/RTX3090x2/node1/CPU2/32G/12h, with %j-
+logs. It reports component exit and model log tails on failure. All caches
+and downloads stay under this workspace; HF uses the requested shared cache.
+The CPU setup job uses P2/node1/CPU4/32G/12h, reuses ChatArena-old's environments
+and headers via local links when available, and otherwise installs local runtimes.
+UI requirements are in requirements-mixed-ui.txt. Slurm resource profiles/guard
+were extended only for these two scripts. README contains setup and submission.
+
+Prior 685699 logs show missing files at the old ChatArena venv path; the files
+exist in ChatArena-old after the checkout move. Setup restores the original
+entry paths via links; no claim of a successful runtime from these old logs.
+This task performed source/log reads and code edits only: no Python executions,
+tests/checkers, installations, job submissions/cancellations or API calls.
+The next step for the user is to export OPENAI_API_KEY, submit CPU setup and
+submit the GPU game job dependent on successful setup. Runtime is unverified.
+
 ## Objective
 
 2026-10-18 completed 274567 analysis and user-requested colleague-facing document

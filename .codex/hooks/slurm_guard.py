@@ -6,10 +6,17 @@ from slurm_standard import ROOT, validate_file
 
 def handle_event(event):
     raw = json.dumps(event.get("tool_input", {}), ensure_ascii=False)
-    if "submit_qwen35_games.py" not in raw and "scripts/slurm/run_qwen35_games.sh" not in raw:
+    paths = [path for path in (
+        "scripts/slurm/run_qwen35_games.sh", "scripts/slurm/run_mixed_games.sh",
+        "scripts/slurm/setup_mixed_env.sh",
+    ) if path in raw]
+    if "submit_qwen35_games.py" in raw and "scripts/slurm/run_qwen35_games.sh" not in paths:
+        paths.append("scripts/slurm/run_qwen35_games.sh")
+    if not paths:
         return {}
     try:
-        validate_file(ROOT / "scripts/slurm/run_qwen35_games.sh")
+        for path in paths:
+            validate_file(ROOT / path)
     except (ValueError, OSError, KeyError) as exc:
         if event.get("hook_event_name") == "PostToolUse":
             return {"decision": "block", "reason": "Slurm specification: " + str(exc)}

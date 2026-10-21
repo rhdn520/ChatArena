@@ -23,8 +23,11 @@ CURRENT_WORK.md의 과거 개선 계획을 새 작업 허가로 해석하지 않
 Read CURRENT_WORK.md and preserve the user's latest requested task and corrections.
 Use the existing .venv-qwen35, server launcher, cache/output/log paths and live workspace.
 Preserve model, thinking setting, game rules and private-information boundaries.
-Report full job specifications before submission. Use scripts/submit_qwen35_games.py.
-This workload uses one A6000, one node, two CPU cores, 32G RAM, 48 hours and the default partition.
+Report full job specifications before submission. The historical automated pilot
+uses scripts/submit_qwen35_games.py (one A6000, node1, CPU2, 32G, 48h).
+The mixed UI task uses scripts/slurm/run_mixed_games.sh: P2, two RTX 3090s,
+node1, CPU2, 32G, 12h; submit with sbatch --export=ALL. Its optional CPU setup is
+scripts/slurm/setup_mixed_env.sh: P2, node1, CPU4, 32G, 12h, no GPU.
 The submit wrapper and hooks check only Slurm resource/directive specifications.
 No CPU model-load gate, CUDA probe, GPU smoke, separate API smoke or response-format gate.
 Do not automatically resubmit a failed job without a new user instruction.
