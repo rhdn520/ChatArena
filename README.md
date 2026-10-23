@@ -108,6 +108,24 @@ This will launch a demo server for ChatArena, and you can access it from your br
 
 Check out this video to learn how to use Web UI: [![Webui demo video](https://img.shields.io/badge/WebUI%20Demo%20Video-Vimeo-blue?logo=vimeo)](https://vimeo.com/816979419)
 
+### 저장된 게임 기록 조회
+
+사용 중인 Conda 환경을 활성화한 뒤 실행합니다. 모델 서버나 API 키는 필요하지 않습니다.
+
+```bash
+python -u game_history_app.py --port 8082
+```
+
+`http://127.0.0.1:8082`에서 게임 → job ID → seed 또는 세션·판을 선택하면
+전체 대화를 발언자·턴·공개 범위(수신 대상)와 함께 볼 수 있습니다.
+`outputs/*/job_*/<게임>/seed_*`의 자동 실험 기록과
+`outputs/mixed_games/job_*/<게임>/*.json`의 웹 게임 완료 기록을 읽습니다.
+새 기록이나 진행 중 실험의 저장된 대화는 **목록·대화 새로고침**으로 다시 읽습니다.
+
+이전 웹 게임 기록에는 공개 대화만 남아 있습니다. 새 저장 코드가 적용된 프로세스에서
+완료되는 웹 게임부터 비공개 메시지와 수신 대상도 저장됩니다. 조회 화면은 비공개 기록까지
+표시하므로 기본적으로 로컬에서 열립니다. 공유 링크가 필요하면 `--share`를 지정합니다.
+
 ## For Developers
 
 For an introduction to the ChatArena framework, please refer to [this document](docs/devdoc/design.md).

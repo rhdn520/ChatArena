@@ -1,5 +1,76 @@
 # Current work
 
+## 2026-10-24 collapsible settings in history viewer
+
+User requested settings above each conversation in a toggle, including each
+player's model. Added a closed-by-default Gradio Accordion with per-player
+role/type/model/generation settings, record identity, game and moderator
+settings. Pilot summaries use the common model/sampling settings documented
+by their runner; mixed UI records use saved per-player metadata. Missing
+historical settings are labelled 미기록, never filled from current defaults.
+All selection/refresh callbacks update details with the selected transcript.
+
+Completed UI records now additionally retain allowed generation parameters
+per backend, environment limits and moderator settings; excludes endpoints,
+keys and authentication config. Old records remain unchanged; additional
+settings require games completed by new UI processes. No game mechanics,
+model configuration or execution environment changed. No Python execution,
+tests, app launch, model calls or Slurm operations; runtime remains unverified.
+
+## 2026-10-24 recipient role labels in history viewer
+
+User requested roles next to private-message recipients as well as speakers.
+Updated game_history.py to use the same role labels in structured visible_to
+and text-transcript audience headings, including every recipient of group
+messages. Unknown roles remain labelled 역할 미기록. No Python execution,
+tests or app launch; browser rendering remains unverified. Restart viewer.
+
+## 2026-10-24 role labels in history viewer
+
+User requested Player names with actual roles in both game histories. Updated
+only game_history.py: message headings now show Player N (마피아/의사/경찰/시민)
+or Player N (라이어/일반인). Reads Moderator turn0 private role cards from
+messages.json or conversation.txt, plus completed UI Liar result.liar_name.
+Player role claims are not used; missing roles are labelled 역할 미기록.
+Speaker colors and original audience labels are preserved. No saved records,
+game logic or live UI changed. No Python execution, tests or app launch;
+browser behavior remains unverified. Restart the viewer to load the change.
+
+## 2026-10-24 speaker colors in history viewer
+
+User requested different colors per speaker. Updated only the history viewer's
+message rendering/CSS: Moderator uses slate; Player1..10 use fixed numbered
+background and border colors. Message text and audience labels remain present.
+No Python execution, tests, app launch or environment changes; browser rendering
+remains unverified. Restart the history app to load the change.
+
+## 2026-10-24 history viewer Conda/Python 3.8 compatibility
+
+User runs the viewer in their existing ChatArena Conda environment (Python3.8)
+and reported Chatbot rejecting autoscroll. Removed the optional autoscroll
+argument and replaced str.removeprefix (Python3.9+) with slicing the known
+job_ prefix. No environment/dependency changes, Python execution, tests or
+app launch. User traceback is from /data6/seungwoochoi2/ChatArena; edits here
+are in /home/seungwoochoi2/data/ChatArena. Runtime success remains unverified.
+
+## 2026-10-23 saved game conversation viewer
+
+User requested game/job/session-or-seed selection and a chat view of all saved
+messages with original visibility. Added game_history_app.py (local port8082,
+optional --share) and chatarena/ui/game_history.py. Reads pilot messages.json
+or existing conversation.txt and mixed UI completed-game JSONs; manual refresh
+only, no model calls or polling. Shows every saved message with speaker, turn,
+type and original recipients. Older public-only UI records are labelled as
+incomplete; missing private history is not reconstructed.
+
+Updated completed UI recording to save all message-pool messages and visible_to,
+with message_scope=all. Applies to games completed by new processes; existing
+files and live player observation filtering are unchanged. README includes the
+existing .venv-qwen35 launch command. Existing pilot records were read as format
+examples; outputs/mixed_games is absent in this workspace. No Python execution,
+tests, model/API calls, installs, Slurm submission or app launch performed.
+Runtime/browser behavior remains unverified.
+
 ## 2026-10-21 prepare sb/refinement for user-requested push
 
 User requested a new sb/refinement branch and push. Preparing the mixed UI,
